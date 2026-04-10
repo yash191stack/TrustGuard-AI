@@ -1,8 +1,17 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { analyzeText, analyzeURL, analyzeAudio, analyzeImage, analyzeDocument, analyzeVideo } from '../utils/api';
 import ThreatMeter from './ThreatMeter';
 import ResultCard from './ResultCard';
 import './Scanner.css';
+
+const ANALYSIS_PHASES = [
+  { id: 'receiving', label: 'Receiving input', icon: '📥' },
+  { id: 'precheck', label: 'Running pre-check filters', icon: '🔍' },
+  { id: 'analyzing', label: 'Deep analysis in progress', icon: '🧠' },
+  { id: 'frames', label: 'Analyzing sampled frames', icon: '🎞️' },
+  { id: 'calculating', label: 'Calculating risk score', icon: '📊' },
+  { id: 'report', label: 'Generating report', icon: '📋' }
+];
 
 export default function Scanner() {
   const [activeTab, setActiveTab] = useState('text');
@@ -11,7 +20,10 @@ export default function Scanner() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [currentPhase, setCurrentPhase] = useState(0);
+  const [phaseProgress, setPhaseProgress] = useState(0);
   const fileRef = useRef(null);
+  const phaseTimerRef = useRef(null);
 
   const tabs = [
     { id: 'text', label: 'Message', icon: '💬', placeholder: 'Paste a suspicious message here...\n\nExample: "Congratulations! You won $1,000,000! Click here to claim your prize now!"' },
@@ -22,10 +34,61 @@ export default function Scanner() {
     { id: 'video', label: 'Video (AI)', icon: '🎞️', accept: 'video/*' }
   ];
 
+  // Get relevant phases for current tab
+  const getPhases = () => {
+    if (activeTab === 'video') return ANALYSIS_PHASES;
+    return ANALYSIS_PHASES.filter(p => p.id !== 'frames');
+  };
+
+  // Animate through phases while loading
+  useEffect(() => {
+    if (!loading) {
+      setCurrentPhase(0);
+      setPhaseProgress(0);
+      return;
+    }
+
+    const phases = getPhases();
+    let phase = 0;
+    setCurrentPhase(0);
+    setPhaseProgress(0);
+
+    const advancePhase = () => {
+      phase++;
+      if (phase < phases.length) {
+        setCurrentPhase(phase);
+        setPhaseProgress(Math.round((phase / phases.length) * 100));
+      }
+    };
+
+    // Advance phases every 1.5-2.5 seconds
+    const intervals = [];
+    let delay = 800;
+    for (let i = 1; i < phases.length; i++) {
+      delay += 1200 + Math.random() * 1000;
+      const timeout = setTimeout(advancePhase, delay);
+      intervals.push(timeout);
+    }
+
+    phaseTimerRef.current = intervals;
+
+    return () => {
+      intervals.forEach(clearTimeout);
+    };
+  }, [loading, activeTab]);
+
   const handleScan = async () => {
     setError('');
     setResult(null);
     setLoading(true);
+
+    // Client-side file size check (10MB)
+    if (file && file.size > 10 * 1024 * 1024) {
+      setError('File too large. Maximum size is 10MB.');
+      setLoading(false);
+      return;
+    }
+
     try {
       let res;
       switch (activeTab) {
@@ -54,9 +117,18 @@ export default function Scanner() {
           res = await analyzeVideo(file);
           break;
       }
+
+      // Small delay to let the last phase complete visually
+      await new Promise(resolve => setTimeout(resolve, 600));
       setResult(res);
     } catch (e) {
-      setError('Analysis failed. Make sure the backend server is running and API keys are valid.');
+      if (e.message?.includes('429')) {
+        setError('Rate limit exceeded. Please wait a moment before scanning again.');
+      } else if (e.message?.includes('413')) {
+        setError('File too large. Maximum file size is 10MB.');
+      } else {
+        setError('Analysis failed. Make sure the backend server is running and API keys are valid.');
+      }
     }
     setLoading(false);
   };
@@ -76,7 +148,8 @@ export default function Scanner() {
   };
 
   const isFileTab = ['audio', 'image', 'document', 'video'].includes(activeTab);
-  const currentTab = tabs.find(t => t.id === activeTab);
+  const currentTabData = tabs.find(t => t.id === activeTab);
+  const phases = getPhases();
 
   return (
     <section className="scanner" id="scanner">
@@ -111,7 +184,7 @@ export default function Scanner() {
                 className="scanner-textarea"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={currentTab.placeholder}
+                placeholder={currentTabData.placeholder}
                 rows={6}
               />
             ) : (
@@ -124,24 +197,29 @@ export default function Scanner() {
                 <input
                   ref={fileRef}
                   type="file"
-                  accept={currentTab.accept}
+                  accept={currentTabData.accept}
                   onChange={(e) => setFile(e.target.files[0])}
                   style={{ display: 'none' }}
                 />
                 {file ? (
                   <div className="file-info">
-                    <div className="file-icon">{currentTab.icon}</div>
-                    <div className="file-name">{file.name}</div>
-                    <div className="file-size">{(file.size / 1024).toFixed(1)} KB</div>
+                    <div className="file-icon">{currentTabData.icon}</div>
+                    <div className="file-details">
+                      <div className="file-name">{file.name}</div>
+                      <div className="file-size">{(file.size / 1024).toFixed(1)} KB</div>
+                    </div>
+                    {file.size > 10 * 1024 * 1024 && (
+                      <div className="file-warning">⚠️ Exceeds 10MB limit</div>
+                    )}
                     <button className="file-remove" onClick={(e) => { e.stopPropagation(); setFile(null); }}>✕</button>
                   </div>
                 ) : (
                   <div className="drop-content">
-                    <div className="drop-icon">{currentTab.icon}</div>
+                    <div className="drop-icon">{currentTabData.icon}</div>
                     <div className="drop-text">
-                      Drag & drop your {currentTab.label.toLowerCase()} here
+                      Drag & drop your {currentTabData.label.toLowerCase()} here
                     </div>
-                    <div className="drop-subtext">or click to browse</div>
+                    <div className="drop-subtext">or click to browse (max 10MB)</div>
                   </div>
                 )}
               </div>
@@ -156,7 +234,7 @@ export default function Scanner() {
             {loading ? (
               <>
                 <div className="scan-spinner"></div>
-                <span>Analyzing...</span>
+                <span>Processing...</span>
               </>
             ) : (
               <>
@@ -168,17 +246,24 @@ export default function Scanner() {
             )}
           </button>
 
-          {/* Loading Animation */}
+          {/* ─── MULTI-PHASE PROGRESS ANIMATION ──────────────── */}
           {loading && (
             <div className="scan-progress">
               <div className="progress-bar">
-                <div className="progress-fill"></div>
+                <div className="progress-fill" style={{ width: `${phaseProgress}%` }}></div>
               </div>
-              <div className="progress-steps">
-                <span className="step active">Receiving input</span>
-                <span className="step">Analyzing patterns</span>
-                <span className="step">Validating against Live API</span>
-                <span className="step">Generating report</span>
+              <div className="phase-indicators">
+                {phases.map((phase, index) => (
+                  <div
+                    key={phase.id}
+                    className={`phase-item ${index < currentPhase ? 'completed' : ''} ${index === currentPhase ? 'active' : ''} ${index > currentPhase ? 'pending' : ''}`}
+                  >
+                    <div className="phase-dot">
+                      {index < currentPhase ? '✓' : index === currentPhase ? phase.icon : ''}
+                    </div>
+                    <span className="phase-label">{phase.label}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}

@@ -28,6 +28,8 @@ const fileFilter = (req, file, cb) => {
     // Audio
     'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/flac', 'audio/aac',
     'audio/mp4', 'audio/webm', 'audio/x-m4a', 'audio/opus',
+    // Documents
+    'application/pdf', 'text/plain',
     // Allow octet-stream for unrecognized but potentially valid files
     'application/octet-stream'
   ];
@@ -39,11 +41,12 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+// ─── COST OPTIMIZATION: Reduced max file size from 50MB to 10MB ───
 const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 50 * 1024 * 1024 // 50MB max
+    fileSize: 10 * 1024 * 1024 // 10MB max (reduced from 50MB)
   }
 });
 

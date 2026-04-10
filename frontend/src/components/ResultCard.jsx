@@ -6,7 +6,16 @@ export default function ResultCard({ result }) {
 
   if (!result) return null;
 
-  const { summary, threats, indicators, recommendations, threatCategory, details, scanId } = result;
+  const { summary, explanation, confidence, analysisSource, fallbackUsed, threats, indicators, recommendations, threatCategory, details, scanId } = result;
+
+  const sourceLabels = {
+    'api': { label: '🔬 AI Deep Analysis', className: 'source-api' },
+    'heuristic': { label: '🔧 Heuristic Analysis', className: 'source-heuristic' },
+    'pre-check': { label: '⚡ Quick Pre-check', className: 'source-precheck' },
+    'none': { label: '—', className: '' }
+  };
+
+  const sourceInfo = sourceLabels[analysisSource] || sourceLabels['none'];
 
   return (
     <div className="result-card glass-card">
@@ -16,11 +25,59 @@ export default function ResultCard({ result }) {
           <div className="category-dot" style={{ background: threatCategory?.color }}></div>
           <span style={{ color: threatCategory?.color }}>{threatCategory?.name}</span>
         </div>
-        <div className="result-scan-id">{scanId}</div>
+        <div className="result-header-right">
+          <div className={`analysis-source ${sourceInfo.className}`}>
+            {sourceInfo.label}
+          </div>
+          <div className="result-scan-id">{scanId}</div>
+        </div>
       </div>
+
+      {/* Fallback Badge */}
+      {fallbackUsed && (
+        <div className="fallback-badge">
+          <span className="fallback-icon">⚡</span>
+          <span>Local analysis only — External API was unavailable</span>
+        </div>
+      )}
 
       {/* Summary */}
       <div className="result-summary">{summary}</div>
+
+      {/* Explanation + Confidence */}
+      {(explanation || confidence) && (
+        <div className="explanation-section">
+          {explanation && (
+            <div className="explanation-box">
+              <div className="explanation-label">📝 Analysis Explanation</div>
+              <p className="explanation-text">{explanation}</p>
+            </div>
+          )}
+          {confidence > 0 && (
+            <div className="confidence-section">
+              <div className="confidence-header">
+                <span className="confidence-label">Confidence Score</span>
+                <span className="confidence-value">{confidence}%</span>
+              </div>
+              <div className="confidence-bar-bg">
+                <div
+                  className="confidence-bar-fill"
+                  style={{
+                    width: `${confidence}%`,
+                    background: confidence >= 80 ? 'var(--accent-green)' : confidence >= 50 ? 'var(--warning-amber)' : 'var(--danger-red)',
+                    boxShadow: `0 0 8px ${confidence >= 80 ? 'rgba(0,255,136,0.4)' : confidence >= 50 ? 'rgba(255,170,0,0.4)' : 'rgba(255,68,68,0.4)'}`
+                  }}
+                ></div>
+              </div>
+              <div className="confidence-hint">
+                {confidence >= 80 ? 'High confidence — powered by AI deep analysis' :
+                 confidence >= 50 ? 'Moderate confidence — based on pattern matching' :
+                 'Low confidence — basic pre-check only'}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Threats */}
       {threats.length > 0 && (
@@ -71,6 +128,14 @@ export default function ResultCard({ result }) {
               <li key={i}>{rec}</li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* Cost Optimization Badge */}
+      {details?.costSaved && (
+        <div className="cost-saved-badge">
+          <span>💰</span>
+          <span>API call saved — content analyzed using local pre-check rules</span>
         </div>
       )}
 

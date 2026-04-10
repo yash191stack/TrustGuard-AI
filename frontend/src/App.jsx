@@ -3,6 +3,7 @@ import ParticleBackground from './components/ParticleBackground';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Scanner from './components/Scanner';
+import LiveDeepfake from './components/LiveDeepfake';
 import Dashboard from './components/Dashboard';
 import History from './components/History';
 import Education from './components/Education';
@@ -27,6 +28,7 @@ export default function App() {
       <main>
         <Hero onNavigate={handleNavigate} />
         <Scanner />
+        <LiveDeepfake />
         <Dashboard />
         <History />
         <Education />
