@@ -49,6 +49,13 @@
       "severity": "low",
       "color": "#ffaa00"
     },
+    "MODERATION": {
+      "id": "MODR",
+      "name": "Content Moderation",
+      "description": "Content flagged for violent, explicit, or restricted material",
+      "severity": "high",
+      "color": "#ff2266"
+    },
     "SAFE": {
       "id": "SAFE",
       "name": "Safe Content",
@@ -58,11 +65,9 @@
     }
   },
   "riskLevels": {
-    "SAFE": { "min": 0, "max": 20, "label": "Safe", "color": "#00ff88", "emoji": "🟢" },
-    "LOW": { "min": 21, "max": 40, "label": "Low Risk", "color": "#88ff00", "emoji": "🟡" },
-    "MEDIUM": { "min": 41, "max": 60, "label": "Suspicious", "color": "#ffaa00", "emoji": "🟠" },
-    "HIGH": { "min": 61, "max": 80, "label": "Dangerous", "color": "#ff4400", "emoji": "🔴" },
-    "CRITICAL": { "min": 81, "max": 100, "label": "Critical Threat", "color": "#ff0044", "emoji": "🚨" }
+    "LIKELY_SAFE": { "min": 0, "max": 35, "label": "Likely Safe", "color": "#00ff88", "emoji": "🟢" },
+    "SUSPICIOUS": { "min": 36, "max": 65, "label": "Suspicious", "color": "#ffaa00", "emoji": "🟠" },
+    "DANGEROUS": { "min": 66, "max": 100, "label": "Dangerous", "color": "#ff0044", "emoji": "🔴" }
   },
   "globalStats": {
     "totalPhishingAttacks2024": "3.4 billion",

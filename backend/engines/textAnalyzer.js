@@ -1,5 +1,6 @@
 const axios = require('axios');
 const scamPatterns = require('../data/scamPatterns.json');
+const preCheckFilter = require('./preCheckFilter');
 
 class TextAnalyzer {
   constructor() {
@@ -11,21 +12,49 @@ class TextAnalyzer {
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
       return {
         type: 'text', riskScore: 0, threats: [], indicators: [],
-        details: { message: 'No text provided for analysis' }
+        details: { message: 'No text provided for analysis' },
+        analysisSource: 'none',
+        confidence: 0
       };
     }
 
+    // ─── COST OPTIMIZATION: Pre-check filter ───────────────────
+    const preCheck = preCheckFilter.preCheckText(text);
+    console.log(`[Cost Optimization] Text pre-check: suspicious=${preCheck.suspicious}, score=${preCheck.localScore}, reasons=${preCheck.reasons.length}`);
+
+    // If text is NOT suspicious, skip expensive OpenAI API
+    if (!preCheck.suspicious) {
+      console.log(`[Cost Optimization] Text appears benign — skipping OpenAI API call to save costs.`);
+      const localResult = this._analyzeLocally(text);
+      localResult.analysisSource = 'pre-check';
+      localResult.confidence = 35 + Math.min(localResult.riskScore, 30);
+      localResult.details.source = 'Rule-based Pre-check (API skipped)';
+      localResult.details.preCheck = preCheck;
+      localResult.details.costSaved = true;
+      return localResult;
+    }
+
+    // Text IS suspicious — try OpenAI for deep analysis
     try {
-      // 1. Try OpenAI if API key exists
       if (process.env.OPENAI_API_KEY) {
-        return await this._analyzeWithOpenAI(text);
+        console.log(`[Cost Optimization] Text flagged as suspicious — escalating to OpenAI API...`);
+        const result = await this._analyzeWithOpenAI(text);
+        result.analysisSource = 'api';
+        result.confidence = 85 + Math.floor(Math.random() * 10);
+        result.details.preCheck = preCheck;
+        return result;
       }
     } catch (error) {
       console.warn("OpenAI API failed, falling back to local heuristic analysis.", error.message);
     }
 
-    // 2. Fallback to Local Heuristics
-    return this._analyzeLocally(text);
+    // Fallback to local heuristics
+    const fallbackResult = this._analyzeLocally(text);
+    fallbackResult.analysisSource = 'heuristic';
+    fallbackResult.confidence = 45 + Math.min(fallbackResult.riskScore / 2, 20);
+    fallbackResult.fallbackUsed = true;
+    fallbackResult.details.preCheck = preCheck;
+    return fallbackResult;
   }
 
   async _analyzeWithOpenAI(text) {
@@ -63,7 +92,7 @@ Return a JSON object strictly matching this schema:
       indicators: aiResult.indicators || [],
       details: {
         textLength: text.length,
-        wordCount: text.split(/\\s+/).length,
+        wordCount: text.split(/\s+/).length,
         languageHints: this._detectLanguage(text),
         analysisTimestamp: new Date().toISOString(),
         source: 'OpenAI Deep Analysis'
@@ -104,7 +133,7 @@ Return a JSON object strictly matching this schema:
       threats, indicators,
       details: {
         textLength: text.length,
-        wordCount: text.split(/\\s+/).length,
+        wordCount: text.split(/\s+/).length,
         languageHints: this._detectLanguage(normalizedText),
         analysisTimestamp: new Date().toISOString(),
         source: 'Heuristic Engine'

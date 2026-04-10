@@ -14,6 +14,7 @@ export default function Navbar({ activeSection, onNavigate }) {
   const navItems = [
     { id: 'home', label: 'Home', icon: '🏠' },
     { id: 'scanner', label: 'Scanner', icon: '🔍' },
+    { id: 'livedeepfake', label: 'Live Cam', icon: '📹' },
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'history', label: 'History', icon: '📋' },
     { id: 'education', label: 'Learn', icon: '🎓' }

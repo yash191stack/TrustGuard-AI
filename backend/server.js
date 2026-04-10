@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const analyzeRoutes = require('./routes/analyze');
 const statsRoutes = require('./routes/stats');
+const rateLimiter = require('./middleware/rateLimiter');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -26,13 +27,24 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'operational',
     service: 'TrustGuard AI Engine',
-    version: '1.0.0',
+    version: '2.0.0',
     timestamp: new Date().toISOString(),
     engines: {
       text: 'active',
       url: 'active',
       audio: 'active',
-      image: 'active'
+      image: 'active',
+      video: 'active',
+      preCheckFilter: 'active',
+      riskCalculator: 'active'
+    },
+    optimizations: {
+      costOptimization: 'Rule-based Pre-check Layer active',
+      videoSampling: 'Key Frame Sampling (7 frames, majority vote)',
+      rateLimiting: `${rateLimiter.getStats().maxRequests} req/min per IP`,
+      maxFileSize: '10MB',
+      riskOutput: '3-tier (Likely Safe / Suspicious / Dangerous)',
+      fallbackMode: 'Auto-activate on API failure'
     }
   });
 });
@@ -41,26 +53,36 @@ app.get('/api/health', (req, res) => {
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
   if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).json({ error: 'File too large. Maximum size is 50MB.' });
+    return res.status(413).json({ error: 'File too large. Maximum size is 10MB.' });
   }
   res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
 app.listen(PORT, () => {
   console.log(`
-  ╔══════════════════════════════════════════════╗
-  ║         🛡️  TrustGuard AI Engine  🛡️          ║
-  ║                                              ║
-  ║   Server running on port ${PORT}               ║
-  ║   API: http://localhost:${PORT}/api            ║
-  ║                                              ║
-  ║   Engines Status:                            ║
-  ║   ✅ Text Analyzer    — Active               ║
-  ║   ✅ URL Analyzer     — Active               ║
-  ║   ✅ Audio Analyzer   — Active               ║
-  ║   ✅ Image Analyzer   — Active               ║
-  ║   ✅ Risk Calculator  — Active               ║
-  ╚══════════════════════════════════════════════╝
+  ╔══════════════════════════════════════════════════════╗
+  ║       🛡️  TrustGuard AI Engine v2.0  🛡️              ║
+  ║                                                      ║
+  ║   Server running on port ${PORT}                       ║
+  ║   API: http://localhost:${PORT}/api                    ║
+  ║                                                      ║
+  ║   🚀 Optimizations Active:                           ║
+  ║   ✅ Cost Optimization  — Pre-check Filter Layer     ║
+  ║   ✅ Video Sampling     — Key Frame (7 frames)       ║
+  ║   ✅ Rate Limiting      — 30 req/min per IP          ║
+  ║   ✅ File Size Cap      — 10MB max                   ║
+  ║   ✅ Risk Output        — 3-Tier Categories          ║
+  ║   ✅ Fallback Mode      — Auto on API failure        ║
+  ║                                                      ║
+  ║   Engines Status:                                    ║
+  ║   ✅ Text Analyzer      — Active (+ Pre-check)       ║
+  ║   ✅ URL Analyzer       — Active (+ Pre-check)       ║
+  ║   ✅ Image Analyzer     — Active (+ Pre-check)       ║
+  ║   ✅ Video Analyzer     — Active (+ Key Frames)      ║
+  ║   ✅ Audio Analyzer     — Active                     ║
+  ║   ✅ Document Analyzer  — Active                     ║
+  ║   ✅ Risk Calculator    — Active (3-Tier Output)     ║
+  ╚══════════════════════════════════════════════════════╝
   `);
 });
 

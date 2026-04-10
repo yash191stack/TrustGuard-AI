@@ -34,6 +34,37 @@
 .meter-info {
   flex: 1;
 }
+
+/* ─── 3-TIER BADGE ─────────────────────────────────────── */
+.meter-tier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: var(--space-sm);
+  border: 1px solid;
+}
+.tier-safe {
+  background: var(--safe-green-dim);
+  color: var(--safe-green);
+  border-color: rgba(0, 255, 136, 0.25);
+}
+.tier-suspicious {
+  background: var(--warning-amber-dim);
+  color: var(--warning-amber);
+  border-color: rgba(255, 170, 0, 0.25);
+}
+.tier-dangerous {
+  background: var(--danger-red-dim);
+  color: var(--danger-red);
+  border-color: rgba(255, 68, 68, 0.25);
+}
+.tier-icon { font-size: 1rem; }
+.tier-label { letter-spacing: 0.03em; }
+
 .meter-level {
   display: flex;
   align-items: center;
@@ -55,7 +86,25 @@
   height: 100%;
   transition: width 1.5s ease;
 }
+
+/* ─── 3-TIER SCALE ─────────────────────────────────────── */
+.meter-tier-scale {
+  display: flex;
+  justify-content: space-between;
+}
+.tier-mark {
+  font-size: 0.6rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  font-weight: 600;
+}
+.safe-mark { color: var(--safe-green); }
+.suspicious-mark { color: var(--warning-amber); }
+.dangerous-mark { color: var(--danger-red); }
+
 @media (max-width: 500px) {
   .threat-meter { flex-direction: column; text-align: center; }
   .meter-visual { width: 130px; height: 130px; }
+  .meter-tier-badge { font-size: 0.75rem; }
+  .meter-tier-scale { font-size: 0.55rem; }
 }
