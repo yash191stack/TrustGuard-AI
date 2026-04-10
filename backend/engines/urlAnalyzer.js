@@ -17,20 +17,26 @@ class URLAnalyzer {
     try {
       const parsedUrl = new URL(fullUrl);
       
-      // 1. Try VirusTotal if key exists
-      if (process.env.VIRUSTOTAL_API_KEY) {
-        return await this._analyzeWithVirusTotal(fullUrl, parsedUrl);
+      // COST OPTIMIZATION: Tiered Filtering System
+      // 1. Run free local heuristic checks first
+      const localResult = this._analyzeLocally(fullUrl, parsedUrl);
+      
+      // 2. Only call expensive API (VirusTotal) if early heuristics show suspicion
+      if (process.env.VIRUSTOTAL_API_KEY && (localResult.riskScore >= 10 || localResult.threats.length > 0)) {
+        console.log(`[Cost Optimization] Suspicious URL detected locally (${localResult.riskScore} risk), escalating to VirusTotal API...`);
+        return await this._analyzeWithVirusTotal(fullUrl, parsedUrl, localResult);
       }
 
-      // 2. Fallback to heuristics
-      return this._analyzeLocally(fullUrl, parsedUrl);
+      // 3. If it looks perfectly safe or VT key is absent, return local result immediately to save cost API calls
+      console.log(`[Cost Optimization] URL seems benign or VT disabled, skipping API call to save resources.`);
+      return localResult;
 
     } catch (e) {
       return { type: 'url', riskScore: 0, threats: [{type:'INVALID_URL', description:'Invalid URL format'}], indicators: [], details: {} };
     }
   }
 
-  async _analyzeWithVirusTotal(fullUrl, parsedUrl) {
+  async _analyzeWithVirusTotal(fullUrl, parsedUrl, localResult = null) {
     try {
         const urlId = Buffer.from(fullUrl).toString('base64').replace(/=/g, '');
         const response = await axios.get(`https://www.virustotal.com/api/v3/urls/${urlId}`, {
@@ -38,12 +44,13 @@ class URLAnalyzer {
         });
 
         const stats = response.data.data.attributes.last_analysis_stats;
-        let riskScore = 0;
-        let threats = [];
-        let indicators = [];
+        let riskScore = localResult ? localResult.riskScore : 0;
+        let threats = localResult ? [...localResult.threats] : [];
+        let indicators = localResult ? [...localResult.indicators] : [];
 
         if (stats.malicious > 0 || stats.suspicious > 0) {
-            riskScore = Math.min(((stats.malicious * 20) + (stats.suspicious * 10)), 100);
+            const vtScore = Math.min(((stats.malicious * 20) + (stats.suspicious * 10)), 100);
+            riskScore = Math.max(riskScore, vtScore); // take the max of local or VT score
             threats.push({
                 type: 'VIRUSTOTAL_FLAGGED',
                 category: 'MALWARE/PHISHING',
@@ -63,13 +70,13 @@ class URLAnalyzer {
                 domain: parsedUrl.hostname,
                 protocol: parsedUrl.protocol,
                 vtStats: stats,
-                source: 'VirusTotal API',
+                source: 'VirusTotal API + Heuristics',
                 analysisTimestamp: new Date().toISOString()
             }
         };
     } catch(err) {
         console.warn("VirusTotal check failed, falling back to heuristics.", err.message);
-        return this._analyzeLocally(fullUrl, parsedUrl);
+        return localResult || this._analyzeLocally(fullUrl, parsedUrl);
     }
   }
 

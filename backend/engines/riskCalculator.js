@@ -39,6 +39,19 @@ class RiskCalculator {
     // Generate recommendations
     const recommendations = this._generateRecommendations(type, riskLevel, threats, primaryCategory);
 
+    let levelOverride = riskLevel;
+    let labelOverride = riskConfig.label;
+
+    if (['image', 'video', 'audio'].includes(type) || primaryCategory === 'DEEPFAKE') {
+      if (riskLevel === 'SAFE') {
+        labelOverride = 'Authentic / Real';
+      } else if (riskLevel === 'SUSPICIOUS') {
+        labelOverride = 'Suspected AI / Fake';
+      } else {
+        labelOverride = 'Fake / Deepfake';
+      }
+    }
+
     return {
       scanId: this._generateScanId(),
       timestamp: new Date().toISOString(),
@@ -46,7 +59,7 @@ class RiskCalculator {
       riskScore,
       riskLevel: {
         level: riskLevel,
-        label: riskConfig.label,
+        label: labelOverride,
         color: riskConfig.color,
         emoji: riskConfig.emoji
       },
@@ -69,23 +82,31 @@ class RiskCalculator {
   }
 
   _generateSummary(type, score, level, threats, category) {
-    if (score <= 20) {
-      return `This ${type} content appears to be safe. No significant threats were detected during analysis.`;
-    }
-
-    const threatDescriptions = threats.slice(0, 3).map(t => t.description).join('. ');
+    const isMedia = ['image', 'video', 'audio'].includes(type) || category === 'DEEPFAKE';
     const typeLabels = { text: 'message', url: 'URL', audio: 'audio file', image: 'image', video: 'video' };
     const typeLabel = typeLabels[type] || type;
 
+    if (score <= 20) {
+      if (isMedia) return `This ${typeLabel} appears to be completely authentic and real. No AI manipulation or deepfake threats were detected.`;
+      return `This ${typeLabel} appears to be safe. No significant threats were detected during analysis.`;
+    }
+
+    const threatDescriptions = threats.slice(0, 3).map(t => t.description).join('. ');
+
     if (score <= 40) {
+      if (isMedia) return `🔍 This ${typeLabel} shows some minor technical anomalies (${score}% likelihood of manipulation). ${threatDescriptions}. It is most likely authentic, but exercise slight caution.`;
       return `This ${typeLabel} has some minor suspicious characteristics (${score}% risk). ${threatDescriptions}. Exercise caution but it may be safe.`;
     }
     if (score <= 60) {
+      if (isMedia) return `⚠️ This ${typeLabel} has suspicious artifacts (${score}% likelihood of manipulation). ${threatDescriptions}. There is a strong possibility it is AI-generated or altered.`;
       return `⚠️ This ${typeLabel} is suspicious (${score}% risk). ${threatDescriptions}. We recommend verifying the source before taking any action.`;
     }
     if (score <= 80) {
+      if (isMedia) return `🚨 This ${typeLabel} is highly likely to be a Fake / Deepfake (${score}% probability). ${threatDescriptions}. Do NOT trust this media as factual evidence.`;
       return `🚨 This ${typeLabel} is likely dangerous (${score}% risk). ${threatDescriptions}. Do NOT interact with this content.`;
     }
+    
+    if (isMedia) return `🚨 CRITICAL FAKE DETECTED! This ${typeLabel} is almost certainly a Deepfake / AI-generated (${score}% probability). ${threatDescriptions}. Do not trust this media!`;
     return `🚨 CRITICAL THREAT DETECTED! This ${typeLabel} is extremely dangerous (${score}% risk). ${threatDescriptions}. Do NOT interact, click links, or share personal information.`;
   }
 
