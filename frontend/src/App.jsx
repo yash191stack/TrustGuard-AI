@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ParticleBackground from './components/ParticleBackground';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
@@ -11,6 +11,34 @@ import './index.css';
 
 export default function App() {
   const [activeSection, setActiveSection] = useState('home');
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            // Unobserve after revealing to prevent repeating animation when scrolling back up
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+    );
+
+    // Give React a tiny tick to finish mounting elements before querySelect
+    setTimeout(() => {
+      const targets = document.querySelectorAll(
+        '.glass-card, .feature-card, .scanner-area, .section-header, .stat-card, .history-item'
+      );
+      targets.forEach((el) => {
+        el.classList.add('reveal');
+        observer.observe(el);
+      });
+    }, 100);
+
+    return () => observer.disconnect();
+  }, []);
 
   const handleNavigate = (section) => {
     setActiveSection(section);

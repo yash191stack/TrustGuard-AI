@@ -14,12 +14,12 @@ export default function Scanner() {
   const fileRef = useRef(null);
 
   const tabs = [
-    { id: 'text', label: 'Message', icon: '💬', placeholder: 'Paste a suspicious message here...\n\nExample: "Congratulations! You won $1,000,000! Click here to claim your prize now!"' },
-    { id: 'url', label: 'URL', icon: '🔗', placeholder: 'Enter a suspicious URL...\n\nExample: https://faceb00k-login.com/verify' },
-    { id: 'document', label: 'Document', icon: '📄', accept: '.pdf,.doc,.docx,.txt' },
-    { id: 'audio', label: 'Audio', icon: '🎙️', accept: 'audio/*' },
-    { id: 'image', label: 'Image', icon: '🖼️', accept: 'image/*' },
-    { id: 'video', label: 'Video (AI)', icon: '🎞️', accept: 'video/*' }
+    { id: 'text', label: 'MESSAGE', icon: '[TXT]', placeholder: 'PASTE SUSPICIOUS TEXT HERE...' },
+    { id: 'url', label: 'LINK', icon: '[URL]', placeholder: 'ENTER A SUSPICIOUS URL HERE...' },
+    { id: 'document', label: 'DOC', icon: '[DOC]', accept: '.pdf,.doc,.docx,.txt' },
+    { id: 'audio', label: 'AUDIO', icon: '[WAV]', accept: 'audio/*' },
+    { id: 'image', label: 'IMG', icon: '[JPG]', accept: 'image/*' },
+    { id: 'video', label: 'VIDEO', icon: '[MP4]', accept: 'video/*' }
   ];
 
   const handleScan = async () => {
@@ -30,33 +30,33 @@ export default function Scanner() {
       let res;
       switch (activeTab) {
         case 'text':
-          if (!input.trim()) { setError('Please enter a message to analyze'); setLoading(false); return; }
+          if (!input.trim()) { setError('FATAL: INPUT REQUIRED'); setLoading(false); return; }
           res = await analyzeText(input);
           break;
         case 'url':
-          if (!input.trim()) { setError('Please enter a URL to analyze'); setLoading(false); return; }
+          if (!input.trim()) { setError('FATAL: URL REQUIRED'); setLoading(false); return; }
           res = await analyzeURL(input);
           break;
         case 'document':
-          if (!file) { setError('Please upload a document file'); setLoading(false); return; }
+          if (!file) { setError('FATAL: DOC UPLOAD REQUIRED'); setLoading(false); return; }
           res = await analyzeDocument(file);
           break;
         case 'audio':
-          if (!file) { setError('Please upload an audio file'); setLoading(false); return; }
+          if (!file) { setError('FATAL: AUDIO UPLOAD REQUIRED'); setLoading(false); return; }
           res = await analyzeAudio(file);
           break;
         case 'image':
-          if (!file) { setError('Please upload an image file'); setLoading(false); return; }
+          if (!file) { setError('FATAL: IMAGE UPLOAD REQUIRED'); setLoading(false); return; }
           res = await analyzeImage(file);
           break;
         case 'video':
-          if (!file) { setError('Please upload a video file for Deepfake check'); setLoading(false); return; }
+          if (!file) { setError('FATAL: VIDEO UPLOAD REQUIRED'); setLoading(false); return; }
           res = await analyzeVideo(file);
           break;
       }
       setResult(res);
     } catch (e) {
-      setError('Analysis failed. Make sure the backend server is running and API keys are valid.');
+      setError('SYSTEM ERROR: BACKEND UNAVAILABLE OR API KEY INVALID.');
     }
     setLoading(false);
   };
@@ -83,14 +83,13 @@ export default function Scanner() {
       <div className="container">
         <div className="section-header">
           <h2 className="section-title">
-            <span className="title-icon">🛡️</span>
-            Threat <span className="gradient-text">Scanner</span>
+            <span className="title-icon">⚠</span>
+            THREAT <span className="brutal-highlight-green">SCANNER</span>
           </h2>
-          <p className="section-desc">Paste content or upload files to analyze for threats in real-time</p>
+          <p className="section-desc">PASTE OR UPLOAD TO ANALYZE IN REAL-TIME</p>
         </div>
 
-        <div className="scanner-card glass-card">
-          {/* Tabs */}
+        <div className="scanner-card">
           <div className="scanner-tabs">
             {tabs.map(tab => (
               <button
@@ -104,7 +103,6 @@ export default function Scanner() {
             ))}
           </div>
 
-          {/* Input Area */}
           <div className="scanner-input-area">
             {!isFileTab ? (
               <textarea
@@ -133,60 +131,46 @@ export default function Scanner() {
                     <div className="file-icon">{currentTab.icon}</div>
                     <div className="file-name">{file.name}</div>
                     <div className="file-size">{(file.size / 1024).toFixed(1)} KB</div>
-                    <button className="file-remove" onClick={(e) => { e.stopPropagation(); setFile(null); }}>✕</button>
+                    <button className="file-remove" onClick={(e) => { e.stopPropagation(); setFile(null); }}>[X]</button>
                   </div>
                 ) : (
                   <div className="drop-content">
-                    <div className="drop-icon">{currentTab.icon}</div>
-                    <div className="drop-text">
-                      Drag & drop your {currentTab.label.toLowerCase()} here
-                    </div>
-                    <div className="drop-subtext">or click to browse</div>
+                    <div className="drop-icon">[+]</div>
+                    <div className="drop-text">DROP {currentTab.label} HERE</div>
+                    <div className="drop-subtext">OR CLICK TO BROWSE</div>
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {/* Error */}
           {error && <div className="scanner-error">{error}</div>}
 
-          {/* Scan Button */}
           <button className="scan-button" onClick={handleScan} disabled={loading}>
             {loading ? (
-              <>
-                <div className="scan-spinner"></div>
-                <span>Analyzing...</span>
-              </>
+              <span>[ EXEC... ]</span>
             ) : (
-              <>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                </svg>
-                <span>Analyze Content</span>
-              </>
+              <span>INITIATE ANALYSIS //_</span>
             )}
           </button>
 
-          {/* Loading Animation */}
           {loading && (
             <div className="scan-progress">
               <div className="progress-bar">
                 <div className="progress-fill"></div>
               </div>
-              <div className="progress-steps">
-                <span className="step active">Receiving input</span>
-                <span className="step">Analyzing patterns</span>
-                <span className="step">Validating against Live API</span>
-                <span className="step">Generating report</span>
+              <div className="progress-steps hidden-mobile">
+                <span className="step active">RCV INPUT</span>
+                <span className="step">PATTERN MATCH</span>
+                <span className="step">API VALIDATE</span>
+                <span className="step">REPORT GEN</span>
               </div>
             </div>
           )}
         </div>
 
-        {/* Results */}
         {result && (
-          <div className="scanner-results slide-up">
+          <div className="scanner-results">
             <ThreatMeter score={result.riskScore} level={result.riskLevel} />
             <ResultCard result={result} />
           </div>

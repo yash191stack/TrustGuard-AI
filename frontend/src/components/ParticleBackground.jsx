@@ -1,98 +1,145 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
+import * as THREE from 'three';
 
 export default function ParticleBackground() {
-  const canvasRef = useRef(null);
+  const mountRef = useRef(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    let animationId;
-    let particles = [];
+    if (!mountRef.current) return;
 
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    resize();
-    window.addEventListener('resize', resize);
+    // SCENE, CAMERA, RENDERER
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    mountRef.current.appendChild(renderer.domElement);
 
-    class Particle {
-      constructor() {
-        this.reset();
-      }
-      reset() {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height;
-        this.size = Math.random() * 2 + 0.5;
-        this.speedX = (Math.random() - 0.5) * 0.5;
-        this.speedY = (Math.random() - 0.5) * 0.5;
-        this.opacity = Math.random() * 0.5 + 0.1;
-        this.color = Math.random() > 0.5 ? '0, 255, 136' : '0, 212, 255';
-      }
-      update() {
-        this.x += this.speedX;
-        this.y += this.speedY;
-        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
-          this.reset();
-        }
-      }
-      draw() {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${this.color}, ${this.opacity})`;
-        ctx.fill();
-      }
+    // PARTICLES / NODES
+    const particleCount = window.innerWidth < 768 ? 100 : 250;
+    const maxDistance = window.innerWidth < 768 ? 2 : 2.5;
+    const spread = 20;
+
+    const group = new THREE.Group();
+    scene.add(group);
+
+    const positions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+        // Random placement within a volume
+      positions[i * 3] = (Math.random() - 0.5) * spread;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * spread;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * spread;
     }
 
-    const count = Math.min(80, Math.floor((canvas.width * canvas.height) / 15000));
-    for (let i = 0; i < count; i++) {
-      particles.push(new Particle());
-    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-    const drawLines = () => {
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 150) {
-            ctx.beginPath();
-            ctx.strokeStyle = `rgba(0, 255, 136, ${0.06 * (1 - dist / 150)})`;
-            ctx.lineWidth = 0.5;
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.stroke();
-          }
+    // Stark black points for Brutalist feel
+    const pointMaterial = new THREE.PointsMaterial({
+      color: 0x0EA5E9, // Enterprise Teal
+      size: 0.08, // Smaller, sharper points
+      transparent: true,
+      opacity: 0.6,
+    });
+    const particles = new THREE.Points(geometry, pointMaterial);
+    group.add(particles);
+
+    // CONNECTIONS (LINES)
+    const lineMaterial = new THREE.LineBasicMaterial({
+      color: 0xFFFFFF, 
+      transparent: true,
+      opacity: 0.04, // Extremely subtle lines
+    });
+    
+    // Connect nodes that are close to each other
+    const indices = [];
+    for (let i = 0; i < particleCount; i++) {
+        for (let j = i + 1; j < particleCount; j++) {
+            const dx = positions[i * 3] - positions[j * 3];
+            const dy = positions[i * 3 + 1] - positions[j * 3 + 1];
+            const dz = positions[i * 3 + 2] - positions[j * 3 + 2];
+            const distSq = dx * dx + dy * dy + dz * dz;
+
+            if (distSq < maxDistance * maxDistance) {
+                indices.push(i, j);
+            }
         }
-      }
-    };
+    }
+    geometry.setIndex(indices);
+    const lines = new THREE.LineSegments(geometry, lineMaterial);
+    group.add(lines);
 
+    camera.position.z = 10;
+
+    // PARALLAX MOUSE
+    let mouseX = 0;
+    let mouseY = 0;
+    let targetX = 0;
+    let targetY = 0;
+    let windowHalfX = window.innerWidth / 2;
+    let windowHalfY = window.innerHeight / 2;
+
+    const onPointerMove = (event) => {
+      mouseX = (event.clientX - windowHalfX) * 0.001; // subtle
+      mouseY = (event.clientY - windowHalfY) * 0.001;
+    };
+    document.addEventListener('pointermove', onPointerMove);
+
+    // ANIMATION LOOP
+    let animationFrameId;
     const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach(p => { p.update(); p.draw(); });
-      drawLines();
-      animationId = requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(animate);
+
+      targetX = mouseX;
+      targetY = mouseY;
+      
+      // Smooth interpolation towards mouse
+      group.rotation.x += 0.02 * (targetY - group.rotation.x);
+      group.rotation.y += 0.02 * (targetX - group.rotation.y);
+      
+      // Auto constant slow rotation
+      group.rotation.y += 0.0008;
+      group.rotation.x += 0.0004;
+      group.rotation.z += 0.0002;
+
+      renderer.render(scene, camera);
     };
     animate();
 
+    // RESIZE WINDOW
+    const onWindowResize = () => {
+      windowHalfX = window.innerWidth / 2;
+      windowHalfY = window.innerHeight / 2;
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+    window.addEventListener('resize', onWindowResize);
+
+    // CLEANUP
     return () => {
-      cancelAnimationFrame(animationId);
-      window.removeEventListener('resize', resize);
+      window.removeEventListener('resize', onWindowResize);
+      document.removeEventListener('pointermove', onPointerMove);
+      cancelAnimationFrame(animationFrameId);
+      if (mountRef.current && renderer.domElement) {
+        mountRef.current.removeChild(renderer.domElement);
+      }
+      geometry.dispose();
+      pointMaterial.dispose();
+      lineMaterial.dispose();
+      renderer.dispose();
     };
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
+    <div 
+      ref={mountRef} 
       style={{
         position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-        zIndex: 0,
-        opacity: 0.6
+        inset: 0,
+        zIndex: -1,
+        pointerEvents: 'none'
       }}
     />
   );

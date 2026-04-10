@@ -13,8 +13,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 14px;
-  border: 1px solid;
-  border-radius: var(--radius-full);
+  
   font-size: 0.8rem;
   font-weight: 700;
 }
@@ -33,8 +32,7 @@
   color: var(--text-primary);
   padding: var(--space-md);
   background: var(--bg-primary);
-  border-radius: var(--radius-md);
-  border-left: 3px solid var(--accent-cyan);
+  
   margin-bottom: var(--space-lg);
 }
 .result-section { margin-bottom: var(--space-lg); }
@@ -51,8 +49,7 @@
 .threat-item {
   padding: var(--space-md);
   background: var(--bg-primary);
-  border-radius: var(--radius-md);
-  border-left: 3px solid var(--text-muted);
+  
 }
 .threat-item.severity-critical { border-left-color: #ff0044; }
 .threat-item.severity-high { border-left-color: #ff4444; }

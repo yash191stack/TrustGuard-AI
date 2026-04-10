@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import CyberShield from './CyberShield';
 import './Hero.css';
 
 export default function Hero({ onNavigate }) {
@@ -7,81 +8,72 @@ export default function Hero({ onNavigate }) {
   const [count3, setCount3] = useState(0);
 
   useEffect(() => {
-    const animate = (setter, target, duration) => {
-      let start = 0;
-      const step = target / (duration / 16);
-      const interval = setInterval(() => {
-        start += step;
-        if (start >= target) { setter(target); clearInterval(interval); }
-        else setter(Math.floor(start));
-      }, 16);
-    };
-    const t = setTimeout(() => {
-      animate(setCount1, 175000, 2000);
-      animate(setCount2, 97, 1800);
-      animate(setCount3, 45000, 2000);
-    }, 400);
-    return () => clearTimeout(t);
+    // simplified or skipped animation due to Brutalism, but keeping counts for display
+    setCount1(175000);
+    setCount2(97);
+    setCount3(45000);
   }, []);
 
   return (
-    <section className="hero" id="home">
-      <div className="hero-bg-grid"></div>
+    <section className="hero offset-left-1" id="home">
+      <div className="brutal-bg-pattern"></div>
       <div className="hero-content container">
-        <div className="hero-badge">
+        
+        <div className="brutal-sticker offset-right-2" style={{ marginBottom: '20px' }}>
           <span className="badge-dot"></span>
-          <span>AI-Powered Cybersecurity Shield</span>
+          AI-POWERED SHIELD v2.0
         </div>
 
+        <CyberShield />
+
         <h1 className="hero-title">
-          Detect <span className="gradient-text">Scams</span>,{' '}
-          <span className="gradient-text-cyan">Phishing</span> &{' '}
-          <span className="gradient-text-purple">Deepfakes</span>
-          <br />in Real-Time
+          DETECT <br/>
+          <span className="brutal-highlight-yellow">SCAMS</span>, 
+          <span className="brutal-highlight-green">PHISHING</span> 
+          <br/>& <span className="brutal-highlight-blue">DEEPFAKES</span>
         </h1>
 
+        <div className="brutal-divider"></div>
+
         <p className="hero-subtitle">
-          Paste a message, enter a URL, or upload media — our AI engine analyzes it
-          instantly and tells you if it's <strong>safe</strong> or <strong>dangerous</strong>.
+          PASTE A MESSAGE, ENTER A URL, OR UPLOAD MEDIA.<br/>
+          OUR ENGINE TELLS YOU IF IT'S <strong>SAFE</strong> OR <strong>DANGEROUS</strong>. INSTANTLY. NO BS.
         </p>
 
         <div className="hero-actions">
           <button className="btn-primary" onClick={() => onNavigate('scanner')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            </svg>
-            Start Scanning
+            START SCANNING [➔]
           </button>
-          <button className="btn-secondary" onClick={() => onNavigate('education')}>
-            Learn About Threats
+          <button className="btn-secondary offset-left-1" onClick={() => onNavigate('education')}>
+            LEARN THREATS [?]
           </button>
         </div>
 
-        <div className="hero-stats">
-          <div className="stat-item">
+        <div className="hero-stats brutal-box-container offset-right-2">
+          <div className="stat-card offset-left-3">
             <div className="stat-value">{count1.toLocaleString()}+</div>
-            <div className="stat-label">Threats Detected</div>
+            <div className="stat-label">THREATS DETECTED</div>
           </div>
-          <div className="stat-divider"></div>
-          <div className="stat-item">
+          <div className="stat-card">
             <div className="stat-value">{count2}%</div>
-            <div className="stat-label">Accuracy Rate</div>
+            <div className="stat-label">ACCURACY RATE</div>
           </div>
-          <div className="stat-divider"></div>
-          <div className="stat-item">
+          <div className="stat-card offset-right-2">
             <div className="stat-value">{count3.toLocaleString()}+</div>
-            <div className="stat-label">Users Protected</div>
+            <div className="stat-label">USERS PROTECTED</div>
           </div>
         </div>
 
-        <div className="hero-features">
+        <div className="brutal-divider"></div>
+
+        <div className="hero-features offset-left-1">
           {[
-            { icon: '💬', title: 'Text Analysis', desc: 'Scan messages for scam patterns' },
-            { icon: '🔗', title: 'URL Scanner', desc: 'Detect phishing websites' },
-            { icon: '🎙️', title: 'Audio Check', desc: 'Identify deepfake voices' },
-            { icon: '🖼️', title: 'Media Analysis', desc: 'Detect fake images & videos' }
+            { icon: '💬', title: 'TEXT', desc: 'SCAMS & SPAM' },
+            { icon: '🔗', title: 'URL', desc: 'PHISHING DB' },
+            { icon: '🎙️', title: 'AUDIO', desc: 'DEEPFAKE DETECT' },
+            { icon: '🖼️', title: 'MEDIA', desc: 'FORGERY CHECK' }
           ].map((f, i) => (
-            <div key={i} className="feature-card" style={{ animationDelay: `${i * 0.1}s` }}>
+            <div key={i} className="feature-card offset-left-1">
               <div className="feature-icon">{f.icon}</div>
               <div className="feature-title">{f.title}</div>
               <div className="feature-desc">{f.desc}</div>

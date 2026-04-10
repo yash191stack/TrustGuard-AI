@@ -26,12 +26,12 @@
 }
 .edu-icon {
   width: 50px; height: 50px;
-  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
   flex-shrink: 0;
+  
 }
 .edu-card-info { flex: 1; }
 .edu-card-info h3 {
@@ -50,7 +50,7 @@
   transition: transform var(--transition-base);
   flex-shrink: 0;
 }
-.edu-expand.open { transform: rotate(180deg); }
+.edu-expand.open {  }
 .edu-card-body {
   margin-top: var(--space-lg);
   padding-top: var(--space-lg);
@@ -63,7 +63,7 @@
   margin-bottom: var(--space-lg);
   padding: var(--space-md);
   background: var(--bg-primary);
-  border-radius: var(--radius-md);
+  
 }
 .edu-columns {
   display: grid;
@@ -87,8 +87,7 @@
   color: var(--text-secondary);
   padding: 8px 12px;
   background: var(--bg-primary);
-  border-radius: var(--radius-sm);
-  border-left: 2px solid var(--accent-green);
+  
   line-height: 1.4;
 }
 @media (max-width: 600px) {

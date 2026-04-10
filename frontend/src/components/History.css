@@ -24,7 +24,6 @@
 .history-item:hover { transform: translateX(4px); border-color: var(--border-glow); }
 .history-risk {
   width: 52px; height: 52px;
-  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -33,6 +32,7 @@
   color: #06080d;
   font-family: var(--font-mono);
   flex-shrink: 0;
+  
 }
 .history-content { flex: 1; min-width: 0; }
 .history-top {
@@ -47,8 +47,8 @@
   padding: 2px 8px;
   background: var(--accent-cyan-dim);
   color: var(--accent-cyan);
-  border-radius: var(--radius-full);
   font-family: var(--font-mono);
+  
 }
 .history-level { font-size: 0.8rem; font-weight: 600; }
 .history-preview {
