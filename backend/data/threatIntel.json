@@ -1,0 +1,75 @@
+{
+  "threatCategories": {
+    "PHISHING": {
+      "id": "PHISH",
+      "name": "Phishing Attack",
+      "description": "Attempt to steal sensitive information by disguising as a trustworthy entity",
+      "severity": "high",
+      "color": "#ff4444"
+    },
+    "SCAM": {
+      "id": "SCAM",
+      "name": "Financial Scam",
+      "description": "Fraudulent scheme designed to steal money or financial information",
+      "severity": "critical",
+      "color": "#ff0044"
+    },
+    "IMPERSONATION": {
+      "id": "IMPR",
+      "name": "Impersonation",
+      "description": "Someone pretending to be a trusted person, company, or authority",
+      "severity": "high",
+      "color": "#ff6600"
+    },
+    "DEEPFAKE": {
+      "id": "DEEP",
+      "name": "Deepfake Content",
+      "description": "AI-generated or manipulated media designed to deceive",
+      "severity": "high",
+      "color": "#cc00ff"
+    },
+    "MALWARE": {
+      "id": "MALW",
+      "name": "Malware Distribution",
+      "description": "Attempt to distribute malicious software",
+      "severity": "critical",
+      "color": "#ff0000"
+    },
+    "SOCIAL_ENGINEERING": {
+      "id": "SENG",
+      "name": "Social Engineering",
+      "description": "Psychological manipulation to trick users into making security mistakes",
+      "severity": "medium",
+      "color": "#ff8800"
+    },
+    "SPAM": {
+      "id": "SPAM",
+      "name": "Spam / Unwanted",
+      "description": "Unsolicited messages, often used to distribute scams at scale",
+      "severity": "low",
+      "color": "#ffaa00"
+    },
+    "SAFE": {
+      "id": "SAFE",
+      "name": "Safe Content",
+      "description": "No threats detected in the analyzed content",
+      "severity": "none",
+      "color": "#00ff88"
+    }
+  },
+  "riskLevels": {
+    "SAFE": { "min": 0, "max": 20, "label": "Safe", "color": "#00ff88", "emoji": "🟢" },
+    "LOW": { "min": 21, "max": 40, "label": "Low Risk", "color": "#88ff00", "emoji": "🟡" },
+    "MEDIUM": { "min": 41, "max": 60, "label": "Suspicious", "color": "#ffaa00", "emoji": "🟠" },
+    "HIGH": { "min": 61, "max": 80, "label": "Dangerous", "color": "#ff4400", "emoji": "🔴" },
+    "CRITICAL": { "min": 81, "max": 100, "label": "Critical Threat", "color": "#ff0044", "emoji": "🚨" }
+  },
+  "globalStats": {
+    "totalPhishingAttacks2024": "3.4 billion",
+    "avgDailyScamMessages": "450 million",
+    "moneyLostToScams2024": "$10.3 billion",
+    "deepfakeGrowthRate": "900% since 2020",
+    "avgTimeToDetectPhishing": "250 days",
+    "phishingSuccessRate": "36%"
+  }
+}

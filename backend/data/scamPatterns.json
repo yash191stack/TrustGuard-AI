@@ -1,0 +1,60 @@
+{
+  "urgencyKeywords": {
+    "en": ["urgent", "immediately", "asap", "right now", "hurry", "quick", "fast", "now", "emergency", "critical", "important", "deadline", "expires", "limited time", "act now", "don't delay", "last chance", "final warning", "time sensitive", "rush"],
+    "hi": ["urgent", "jaldi", "abhi", "turant", "fatafat", "jald", "abhi bhej", "jaldi karo", "abhi karo", "foran"]
+  },
+  "financialKeywords": {
+    "en": ["money", "transfer", "bank", "account", "payment", "cash", "dollar", "rupee", "credit card", "debit card", "wire transfer", "western union", "bitcoin", "crypto", "invest", "loan", "fee", "deposit", "withdraw", "balance", "otp", "pin", "cvv", "ssn", "pan card", "aadhaar"],
+    "hi": ["paise", "paisa", "rupaye", "bhej", "bhejdo", "bhej do", "transfer", "bank", "account", "payment", "upi", "phonepe", "gpay", "google pay", "paytm", "khata"]
+  },
+  "impersonationKeywords": {
+    "en": ["i am from", "this is from", "we are from", "calling from", "representative", "customer service", "tech support", "irs", "fbi", "police", "government", "official", "authority", "microsoft", "apple", "amazon", "google", "facebook", "instagram", "whatsapp"],
+    "hi": ["mai bol raha", "mai hun", "yaha se", "company se", "government se", "police se", "bank se"]
+  },
+  "threatKeywords": {
+    "en": ["arrest", "jail", "lawsuit", "legal action", "warrant", "suspended", "blocked", "disabled", "compromised", "hacked", "virus", "malware", "penalty", "fine", "consequences"],
+    "hi": ["giraftar", "arrest", "jail", "case", "band", "block", "hack", "virus"]
+  },
+  "rewardKeywords": {
+    "en": ["congratulations", "winner", "won", "prize", "lottery", "reward", "gift", "free", "bonus", "jackpot", "million", "selected", "lucky", "claim", "offer"],
+    "hi": ["badhai", "jeet", "jeeta", "inaam", "lottery", "prize", "gift", "free", "muft"]
+  },
+  "manipulationPhrases": [
+    "don't tell anyone",
+    "keep this secret",
+    "only you",
+    "special offer just for you",
+    "kisi ko mat batana",
+    "secret",
+    "confidential",
+    "private matter",
+    "between us",
+    "trust me",
+    "believe me",
+    "i promise",
+    "guaranteed",
+    "100% safe",
+    "no risk",
+    "risk free",
+    "verify your identity",
+    "confirm your details",
+    "update your information",
+    "click here",
+    "click below",
+    "click this link",
+    "share this",
+    "forward this"
+  ],
+  "suspiciousPatterns": [
+    "send (\\d+|money|cash|payment)",
+    "transfer .*(money|amount|fund|cash)",
+    "won .*(prize|lottery|gift|reward)",
+    "account .*(suspend|block|hack|compromis)",
+    "verify .*(identity|account|detail|information)",
+    "click .*(here|link|below|button)",
+    "call .*(back|us|this number|immediately)",
+    "share .*(otp|pin|password|code|cvv)",
+    "(bhej|send) .*(\\d+|paise|rupay)",
+    "your .*(account|card|bank) .*(has been|is|was)"
+  ]
+}

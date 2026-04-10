@@ -1,0 +1,40 @@
+{
+  "knownPhishingDomains": [
+    "0-mail.com", "accounts-verify.com", "amaz0n-security.com", "apple-id-verify.com",
+    "bank-secure-login.com", "confirm-identity.com", "customer-alert.com",
+    "delivery-update.info", "ebay-secure.com", "facebok-login.com", "faceb00k.com",
+    "g00gle.com", "gogle.com", "googel.com", "secure-paypal.com", "paypa1.com",
+    "instagram-verify.com", "linkedn.com", "login-microsoft.com", "micros0ft.com",
+    "netflix-billing.com", "netfllx.com", "paypai.com", "secure-banking.info",
+    "sbi-update.com", "hdfc-alert.com", "icici-verify.com", "axis-login.com",
+    "upi-verify.com", "gpay-refund.com", "phonepe-support.com", "paytm-kyc.com",
+    "whatsapp-verify.com", "telegram-verify.com", "covid-relief-fund.com",
+    "free-iphone.com", "prize-winner.com", "lottery-claim.com"
+  ],
+  "suspiciousTLDs": [
+    ".tk", ".ml", ".ga", ".cf", ".gq", ".xyz", ".top", ".buzz", ".club",
+    ".icu", ".work", ".click", ".link", ".info", ".site", ".online", ".space",
+    ".fun", ".monster", ".rest", ".fit", ".surf"
+  ],
+  "legitimateDomains": [
+    "google.com", "facebook.com", "instagram.com", "twitter.com", "x.com",
+    "amazon.com", "amazon.in", "flipkart.com", "microsoft.com", "apple.com",
+    "netflix.com", "youtube.com", "linkedin.com", "github.com", "paypal.com",
+    "sbi.co.in", "hdfcbank.com", "icicibank.com", "axisbank.com",
+    "rbi.org.in", "gov.in", "nic.in", "npci.org.in",
+    "paytm.com", "phonepe.com", "razorpay.com", "upi.org.in"
+  ],
+  "typosquatTargets": {
+    "google": ["g00gle", "googel", "gogle", "googgle", "g0ogle", "gooogle"],
+    "facebook": ["faceb00k", "facebok", "facbook", "facebool", "faceboook"],
+    "amazon": ["amaz0n", "amazn", "amazone", "amazom", "amaazon"],
+    "microsoft": ["micros0ft", "mircosoft", "microsft", "microsofr"],
+    "apple": ["appie", "aple", "applle", "appl3"],
+    "netflix": ["netfllx", "netfiix", "netlfix", "n3tflix"],
+    "paypal": ["paypa1", "paypai", "paypl", "paypall"],
+    "instagram": ["instagran", "lnstagram", "1nstagram", "insragram"],
+    "whatsapp": ["whatsap", "watsapp", "whatsaap", "wh4tsapp"],
+    "paytm": ["paytim", "paytam", "paytem", "p4ytm"],
+    "phonepe": ["phonpe", "ph0nepe", "phonepay", "fonepe"]
+  }
+}
