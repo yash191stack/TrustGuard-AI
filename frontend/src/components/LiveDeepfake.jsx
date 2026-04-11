@@ -14,17 +14,16 @@ import './LiveDeepfake.css';
  */
 
 // ─── CONSTANTS (exact spec) ───────────────────────────────────
-const WEIGHTS       = { blink: 0.10, screen: 0.50, motion: 0.20, texture: 0.10, geometry: 0.10 };
-const SIGNAL_MAX    = { blink: 30, screen: 35, motion: 20, texture: 15, geometry: 10 };
-const BUFFER_SIZE   = 15;
-const MIN_FRAMES    = 5;   // must have this many before issuing a verdict
-const CAPTURE_MS    = 250; // ~300ms interval
+const WEIGHTS       = { blink: 0.10, screen: 0.60, texture: 0.20, geometry: 0.10 };
+const SIGNAL_MAX    = { blink: 30, screen: 35, texture: 15, geometry: 10 };
+const BUFFER_SIZE   = 20; // Aggressive smoothing to stop fluctuation
+const MIN_FRAMES    = 6;  // Wait for enough evidence
+const CAPTURE_MS    = 250;
 
-// Hysteresis thresholds (V21 — wider REAL zone, prevents false SUSPICIOUS on real faces)
+// Hysteresis thresholds (V28 — High stability gate)
 const HYS = {
-  fromReal:       { toFake: 68, toSuspicious: 52 },
-  fromFake:       { toSuspicious: 50, toReal: 38 },
-  fromSuspicious: { toFake: 68, toReal: 38 },
+  toFake:       65,   // Higher bar for FAKE
+  toReal:       42,   // Stickier REAL state
 };
 
 // Auto-calibration state (module-level so it persists across renders)
@@ -340,45 +339,75 @@ export default function LiveDeepfake() {
     const w = imageData.width;
     const h = imageData.height;
     let edgeSum = 0, edgeCount = 0;
-    let blockArtifacts = 0, blockChecks = 0;
 
-    // Laplacian-like edge variance (high = rich texture = real skin)
-    for (let y = 2; y < h - 2; y += 4) {
-      for (let x = 2; x < w - 2; x += 4) {
-        const i = (y * w + x) * 4;
+    // Center-region check for base texture
+    for (let y = h*0.3; y < h*0.7; y += 4) {
+      for (let x = w*0.3; x < w*0.7; x += 4) {
+        const i = (Math.floor(y) * w + Math.floor(x)) * 4;
         const g = (d[i] + d[i+1] + d[i+2]) / 3;
-        const t = ((d[i - w*4] + d[i - w*4+1] + d[i - w*4+2]) / 3);
-        const b = ((d[i + w*4] + d[i + w*4+1] + d[i + w*4+2]) / 3);
-        edgeSum += Math.abs(4 * g - t - b - ((d[i-4]+d[i-3]+d[i-2])/3) - ((d[i+4]+d[i+5]+d[i+6])/3));
+        const t = (d[i - w*4] + d[i - w*4+1] + d[i - w*4+2]) / 3;
+        const b = (d[i + w*4] + d[i + w*4+1] + d[i + w*4+2]) / 3;
+        edgeSum += Math.abs(2 * g - t - b);
         edgeCount++;
       }
     }
     const avgEdge = edgeCount > 0 ? edgeSum / edgeCount : 0;
+    return Math.min(avgEdge, SIGNAL_MAX.texture);
+  };
 
-    // JPEG 8x8 blocking artifacts detection
-    for (let y = 0; y < h - 8; y += 8) {
-      for (let x = 0; x < w - 8; x += 8) {
-        const i1 = ((y + 7) * w + x + 4) * 4;
-        const i2 = ((y + 8) * w + x + 4) * 4;
-        if (i2 < d.length) {
-          const diff = Math.abs(d[i1] - d[i2]);
-          if (diff > 20) blockArtifacts++;
-          blockChecks++;
-        }
+  /** NEW V30 Signals — Heuristic Anomaly Detection */
+
+  const signalTextureVariance = (imageData) => {
+    const d = imageData.data;
+    let sum = 0, sumSq = 0, count = 0;
+    for (let i = 0; i < d.length; i += 40) {
+      const g = (d[i] + d[i+1] + d[i+2]) / 3;
+      sum += g;
+      sumSq += g * g;
+      count++;
+    }
+    const mean = sum / count;
+    const variance = (sumSq / count) - (mean * mean);
+    return variance; // High = complex (real), Low = smooth (synthetic)
+  };
+
+  const signalEdgeDensity = (imageData) => {
+    const d = imageData.data;
+    const w = imageData.width;
+    const h = imageData.height;
+    let edges = 0, total = 0;
+
+    // Simple Sobel-like edge check
+    for (let y = 1; y < h - 1; y += 4) {
+      for (let x = 1; x < w - 1; x += 4) {
+        const i = (y * w + x) * 4;
+        const gx = Math.abs(d[i + 4] - d[i - 4]);
+        const gy = Math.abs(d[i + w * 4] - d[i - w * 4]);
+        if (gx + gy > 30) edges++;
+        total++;
       }
     }
-    const blockRatio = blockChecks > 0 ? blockArtifacts / blockChecks : 0;
+    return (edges / (total + 1)) * 100; // Edge density %
+  };
 
-    let score = 0;
-    // Over-smooth (generative skin): very low edge
-    if (avgEdge < 4)  score += SIGNAL_MAX.texture * 0.9;   // 13.5
-    else if (avgEdge < 8) score += SIGNAL_MAX.texture * 0.5; // 7.5
-
-    // JPEG blocking
-    if (blockRatio > 0.25) score += SIGNAL_MAX.texture * 0.4; // 6
-    else if (blockRatio > 0.15) score += SIGNAL_MAX.texture * 0.2;
-
-    return Math.min(score, SIGNAL_MAX.texture);
+  const signalColorUniformity = (imageData) => {
+    const d = imageData.data;
+    let rVar = 0, gVar = 0, bVar = 0, count = 0;
+    let rSum = 0, gSum = 0, bSum = 0;
+    
+    // Sample center area for skin color variance
+    for (let i = 0; i < d.length; i += 60) {
+      rSum += d[i]; gSum += d[i+1]; bSum += d[i+2];
+      count++;
+    }
+    const rMean = rSum / count, gMean = gSum / count, bMean = bSum / count;
+    
+    let sqDiffSum = 0;
+    for (let i = 0; i < d.length; i += 60) {
+      sqDiffSum += (d[i] - rMean)**2 + (d[i+1] - gMean)**2 + (d[i+2] - bMean)**2;
+    }
+    const avgVar = sqDiffSum / (count * 3);
+    return Math.sqrt(avgVar); // Low = uniform (suspicious)
   };
 
   /** Signal 5: FACIAL GEOMETRY [0–10] — landmark jitter + lip sync */
@@ -423,14 +452,26 @@ export default function LiveDeepfake() {
   // STEP 3 — WEIGHTED SCORE
   // ─────────────────────────────────────────────────────────────
   const computeFakeScore = (sigs) => {
-    // Normalize each signal to 0–1 then multiply by 100
-    const score =
-      (sigs.blink    / SIGNAL_MAX.blink)    * WEIGHTS.blink    * 100 +
-      (sigs.screen   / SIGNAL_MAX.screen)   * WEIGHTS.screen   * 100 +
-      (sigs.motion   / SIGNAL_MAX.motion)   * WEIGHTS.motion   * 100 +
-      (sigs.texture  / SIGNAL_MAX.texture)  * WEIGHTS.texture  * 100 +
-      (sigs.geometry / SIGNAL_MAX.geometry) * WEIGHTS.geometry * 100;
-    return Math.min(Math.round(score), 100);
+    // V30 Hard-coded priority logic
+    // PRIORITY 1: Screen detection (Absolute)
+    if (sigs.screen > 24) return { score: 90, category: 'SPOOF' };
+
+    // PRIORITY 2: Heuristic Deepfake Suspicion
+    let df_score = 0;
+    const reasons = [];
+
+    if (sigs.df_tex_var < 180) { df_score++; reasons.push('Unnatural smoothness'); }
+    if (sigs.df_edge_den < 5.0) { df_score++; reasons.push('Loss of facial detail'); }
+    if (sigs.df_col_uni < 12.0) { df_score++; reasons.push('Low facial texture detected'); }
+    if (sigs.blink > 20)        { df_score++; reasons.push('Abnormal blink pattern'); }
+
+    if (df_score >= 3) {
+      return { score: 75, category: 'DEEPFAKE', reasons };
+    }
+
+    // BASELINE: Weighted score for general risk
+    const raw = (sigs.screen * 1.5) + (sigs.texture * 2) + (sigs.blink * 1) + (sigs.geometry * 1);
+    return { score: Math.min(Math.round(raw), 100), category: 'AUTHENTIC' };
   };
 
   // ─────────────────────────────────────────────────────────────
@@ -440,36 +481,23 @@ export default function LiveDeepfake() {
     const cur = stateRef.current;
     let next = cur;
 
-    if (cur === 'REAL' || cur === 'ANALYZING') {
-      if      (smoothed > 65) next = 'FAKE';
-      else if (smoothed > 52) next = 'SUSPICIOUS';
-      else                    next = 'REAL';
+    // V28 STICKY STATE LOGIC
+    if (cur === 'REAL' || cur === 'ANALYZING' || !cur) {
+      if (smoothed > HYS.toFake) next = 'FAKE';
+      else if (smoothed > 48)     next = 'SUSPICIOUS';
+      else                       next = 'REAL';
       lowScoreStreakRef.current = 0;
 
-    } else if (cur === 'FAKE') {
-      if (smoothed < 42) {
+    } else { 
+      // Coming back from FAKE/SUSPICIOUS requires consecutive stability
+      if (smoothed < HYS.toReal) {
         lowScoreStreakRef.current++;
-        // Requires 8 consecutive frames of low score to drop to REAL
-        next = lowScoreStreakRef.current >= 8 ? 'REAL' : 'FAKE';
-      } else if (smoothed < 52) {
-        next = 'SUSPICIOUS';
-        lowScoreStreakRef.current = 0;
+        // Requires 12 frames (~3 sec) of continuous low score to return to LIVE AUTHENTIC
+        if (lowScoreStreakRef.current >= 12) next = 'REAL';
       } else {
-        next = 'FAKE';
         lowScoreStreakRef.current = 0;
-      }
-
-    } else { // SUSPICIOUS
-      if (smoothed > 60) {
-        next = 'FAKE';
-        lowScoreStreakRef.current = 0;
-      } else if (smoothed < 42) {
-        lowScoreStreakRef.current++;
-        // Requires 6 consecutive frames of low score to drop to REAL
-        next = lowScoreStreakRef.current >= 6 ? 'REAL' : 'SUSPICIOUS';
-      } else {
-        next = 'SUSPICIOUS';
-        lowScoreStreakRef.current = 0;
+        if (smoothed > HYS.toFake) next = 'FAKE';
+        else                      next = 'SUSPICIOUS';
       }
     }
 
@@ -482,13 +510,10 @@ export default function LiveDeepfake() {
   // ─────────────────────────────────────────────────────────────
   const buildReasons = (sigs, verdict) => {
     const candidates = [
-      { score: sigs.screen / SIGNAL_MAX.screen * 100, threshold: 60, text: 'Screen-based content detected (moire/glow pattern)' },
-      { score: sigs.screen / SIGNAL_MAX.screen * 100, threshold: 40, text: 'Uniform lighting pattern detected (no face shadows)' },
-      { score: sigs.blink  / SIGNAL_MAX.blink  * 100, threshold: 50, text: 'Abnormal or absent blinking detected' },
-      { score: sigs.motion / SIGNAL_MAX.motion * 100, threshold: 60, text: 'Unnatural motion pattern observed' },
-      { score: sigs.motion / SIGNAL_MAX.motion * 100, threshold: 40, text: 'Motion inconsistent with a live face' },
-      { score: sigs.texture/ SIGNAL_MAX.texture* 100, threshold: 50, text: 'Compression artifacts detected in face region' },
-      { score: sigs.geometry/SIGNAL_MAX.geometry*100, threshold: 50, text: 'Facial landmark instability detected' },
+      { score: sigs.screen / SIGNAL_MAX.screen * 100, threshold: 50, text: 'Electronic display glow identified (Spoof)' },
+      { score: sigs.texture / SIGNAL_MAX.texture * 100, threshold: 40, text: 'Unnatural texture variation detected (Synthetic)' },
+      { score: sigs.geometry / SIGNAL_MAX.geometry * 100, threshold: 40, text: 'Facial landmark instability detected' },
+      { score: sigs.blink / SIGNAL_MAX.blink * 100, threshold: 40, text: 'Non-human blinking pattern observed' },
     ]
     .filter(c => c.score >= c.threshold)
     .sort((a, b) => b.score - a.score)
@@ -525,17 +550,19 @@ export default function LiveDeepfake() {
     }
     const lm = latestLM.current;
 
-    // ── STEP 2: Extract all 5 signals in parallel ──
+    // ── STEP 2: Extract key signals ──
     const sigs = {
-      blink:    signalBlink(lm),
-      screen:   signalScreen(imageData),
-      motion:   signalMotion(imageData),
-      texture:  signalTexture(imageData),
-      geometry: signalGeometry(lm),
+      blink:      signalBlink(lm),
+      screen:     signalScreen(imageData),
+      texture:    signalTexture(imageData),
+      geometry:   signalGeometry(lm),
+      df_tex_var: signalTextureVariance(imageData),
+      df_edge_den: signalEdgeDensity(imageData),
+      df_col_uni: signalColorUniformity(imageData),
     };
 
-    // ── STEP 3: Weighted fake score ──
-    const fake_score = computeFakeScore(sigs);
+    // ── STEP 3: V30 Categorical Scoring ──
+    const { score: fake_score, category: raw_category, reasons: df_reasons } = computeFakeScore(sigs);
 
     // ── STEP 4: Rolling buffer + smoothed score ──
     scoreBuffer.current = [...scoreBuffer.current, fake_score].slice(-BUFFER_SIZE);
@@ -547,6 +574,14 @@ export default function LiveDeepfake() {
     // ── STEP 5: Hysteresis gate ──
     const verdict = bufferReady ? applyHysteresis(smoothed_score) : 'ANALYZING';
 
+    // ── STEP 6: Differentiate Category ──
+    let category = null;
+    if (verdict === 'FAKE') {
+      category = sigs.screen > 24 ? 'SPOOF' : 'DEEPFAKE';
+    } else if (verdict === 'SUSPICIOUS') {
+      category = 'DEEPFAKE';
+    }
+
     // ── Confidence: based on buffer score variance ──
     let confidence = 'LOW';
     if (scoreBuffer.current.length >= MIN_FRAMES) {
@@ -556,21 +591,24 @@ export default function LiveDeepfake() {
       else if (variance < 150) confidence = 'MEDIUM';
     }
 
-    // ── STEP 6: Reasons ──
-    const reasons = bufferReady ? buildReasons(sigs, verdict) : ['Calibrating sensors...'];
+    // ── STEP 7: Reasons ──
+    const reasons = bufferReady 
+      ? (df_reasons?.length > 0 ? df_reasons : buildReasons(sigs, verdict))
+      : ['Calibrating sensors...'];
 
     // ── Build full output object ──
     const fullOutput = {
       verdict,
+      category,
       fake_score,
       smoothed_score,
       confidence,
       signals: {
         blink:    Math.round(sigs.blink),
         screen:   Math.round(sigs.screen),
-        motion:   Math.round(sigs.motion),
         texture:  Math.round(sigs.texture),
         geometry: Math.round(sigs.geometry),
+        df_score: df_reasons?.length ?? 0,
       },
       reasons,
       frame_count: frameIdxRef.current,
@@ -583,9 +621,8 @@ export default function LiveDeepfake() {
     // DEBUG: log every 5 frames — open browser console to see live signal values
     if (frameIdxRef.current % 5 === 0) {
       console.log(
-        `[V21 FRAME ${frameIdxRef.current}]`,
+        `[V25 FRAME ${frameIdxRef.current}]`,
         `| SCREEN: ${Math.round(sigs.screen)}/${SIGNAL_MAX.screen}`,
-        `| MOTION: ${Math.round(sigs.motion)}/${SIGNAL_MAX.motion}`,
         `| TEXTURE: ${Math.round(sigs.texture)}/${SIGNAL_MAX.texture}`,
         `| BLINK: ${Math.round(sigs.blink)}/${SIGNAL_MAX.blink}`,
         `| FAKE_SCORE: ${fake_score}`,
@@ -637,8 +674,9 @@ export default function LiveDeepfake() {
 
   const verdictText = !output ? 'OFFLINE'
     : !output.buffer_ready ? 'CALIBRATING...'
-    : v === 'REAL'         ? '✔ VERIFIED AUTHENTIC'
-    : v === 'FAKE'         ? '❌ DEEPFAKE DETECTED'
+    : v === 'REAL'         ? '✔ LIVE AUTHENTIC'
+    : output.category === 'SPOOF'  ? '❌ SPOOF ATTACK'
+    : output.category === 'DEEPFAKE' ? '⚠ SUSPICIOUS (POSSIBLE DEEPFAKE)'
     : v === 'SUSPICIOUS'   ? '⚠ SUSPICIOUS CONTENT'
     : '⏳ ANALYZING...';
 
@@ -737,7 +775,7 @@ export default function LiveDeepfake() {
                   )}
                 </div>
                 <div className="hyst-tick-labels">
-                  <span>0</span><span>35</span><span>45</span><span>62</span><span>100</span>
+                  <span>0</span><span>40</span><span>55</span><span>100</span>
                 </div>
               </div>
             </div>
@@ -747,11 +785,9 @@ export default function LiveDeepfake() {
               <div className="hud-label">MULTI-SIGNAL DECOMPOSITION (∑ = {output?.fake_score ?? '—'}/100)</div>
               <div className="gauge-grid">
                 {[
-                  { key: 'screen',   label: 'SCREEN_PAD',  max: SIGNAL_MAX.screen,   w: 35 },
-                  { key: 'blink',    label: 'BLINK_EAR',   max: SIGNAL_MAX.blink,    w: 20 },
-                  { key: 'motion',   label: 'MOTION_COH',  max: SIGNAL_MAX.motion,   w: 20 },
-                  { key: 'texture',  label: 'TEXTURE_LBP', max: SIGNAL_MAX.texture,  w: 15 },
-                  { key: 'geometry', label: 'GEOM_JITTER', max: SIGNAL_MAX.geometry, w: 10 },
+                  { key: 'screen',   label: 'SCREEN_PAD',  max: SIGNAL_MAX.screen,   w: 70 },
+                  { key: 'texture',  label: 'TEXTURE_LBP', max: SIGNAL_MAX.texture,  w: 20 },
+                  { key: 'blink',    label: 'BLINK_EAR',   max: SIGNAL_MAX.blink,    w: 10 },
                 ].map(g => {
                   const raw = output?.signals[g.key] ?? 0;
                   const pct = sigPct?.[g.key] ?? 0;
