@@ -1,91 +1,121 @@
 const axios = require('axios');
+const FormData = require('form-data');
+const stream = require('stream');
 
-async function analyze(base64Frame) {
+const sessionVault = {};
+
+/**
+ * TRUSTGUARD AI - NEURAL SENTINEL (V5) 
+ * UPGRADED TO SIGHTENGINE PRODUCTION ENGINE
+ */
+async function analyze(base64Frame, clientId = 'unknown') {
     try {
-        console.log('[Live Deepfake] Sending high-res JSON frame to HF AI Engine...');
-        const hfKey = process.env.HF_API_KEY;
+        const apiUser = process.env.SIGHTENGINE_API_USER;
+        const apiSecret = process.env.SIGHTENGINE_API_SECRET;
 
-        if (!hfKey) {
-            throw new Error("Missing_HF_Key");
+        if (!apiUser || !apiSecret) {
+            throw new Error("Missing_Sightengine_Credentials");
         }
+
+        if (!sessionVault[clientId]) {
+            sessionVault[clientId] = {
+                history: [],
+                lastHash: '',
+                lastUpdated: Date.now()
+            };
+        }
+        
+        const session = sessionVault[clientId];
+        session.lastUpdated = Date.now();
 
         const base64Data = base64Frame.includes('base64,') ? base64Frame.split('base64,')[1] : base64Frame;
+        const frameBuffer = Buffer.from(base64Data, 'base64');
 
-        // HuggingFace Inference API expects perfectly formatted JSON for vision models
-        // Using axios is stable for JSON JSON.stringify payloads
-        const response = await axios.post(
-            "https://router.huggingface.co/hf-inference/models/prithivMLmods/Deep-Fake-Detector-v2-Model",
-            { inputs: base64Data },
-            {
-                headers: { 
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${hfKey}`
-                }
-            }
-        );
+        // LOCAL: ANTI-POISONING
+        const currentHash = frameBuffer.slice(0, 40).toString('hex');
+        const isStatic = currentHash === session.lastHash;
+        session.lastHash = currentHash;
 
-        let data = response.data;
-        if (Array.isArray(data) && Array.isArray(data[0])) {
-            data = data[0]; 
+        if (isStatic) {
+            return aggregateAndReturn(clientId, { isReal: true, confidence: 0.99, source: 'static_filter' });
         }
 
-        let isReal = true;
-        let confidence = 0.99;
-        let fakeScore = 0;
+        // ─── SIGHTENGINE NEURAL CALL ───
+        console.log(`[Sightengine] Processing frame for client: ${clientId}`);
+        
+        const form = new FormData();
+        const bufferStream = new stream.PassThrough();
+        bufferStream.end(frameBuffer);
+        
+        form.append('media', bufferStream, { filename: 'frame.jpg', contentType: 'image/jpeg' });
+        form.append('models', 'deepfake,face');
+        form.append('api_user', apiUser);
+        form.append('api_secret', apiSecret);
 
-        if (Array.isArray(data)) {
-            const fakeLabel = data.find(d => d.label && d.label.toLowerCase().includes('fake'));
-            if (fakeLabel) fakeScore = fakeLabel.score;
-        }
+        const response = await axios.post('https://api.sightengine.com/1.0/check.json', form, {
+            headers: form.getHeaders(),
+            timeout: 10000
+        });
 
-        isReal = fakeScore < 0.5;
-        confidence = isReal ? (1 - fakeScore) : fakeScore;
+        const body = response.data;
+        
+        // Sightengine 'deepfake' score (0 to 1)
+        const deepfakeScore = body.type?.deepfake || body.deepfake?.prob || 0;
+        const faceDetected = body.faces && body.faces.length > 0;
 
-        return {
-            isReal: isReal,
-            confidence: confidence,
-            details: isReal 
-                ? 'Face verified as authentic via neural analysis.' 
-                : 'Generative ML patterns or deepfake artifacts detected by the model.',
-            notice: 'Analyzed via HuggingFace Deepfake Classifier (Real AI)'
-        };
+        console.log(`[Engine] Result: Deepfake=${deepfakeScore.toFixed(3)}, FaceFound=${faceDetected}`);
+
+        // STRATEGIC TRUTH:
+        // A human is "Dangerous" if deepfake score > 0.65
+        const isActuallyFake = deepfakeScore > 0.65;
+
+        return aggregateAndReturn(clientId, {
+            isReal: !isActuallyFake,
+            confidence: isActuallyFake ? deepfakeScore : (1 - deepfakeScore),
+            details: isActuallyFake ? 'Neural artifacts found' : 'Texture verified'
+        });
 
     } catch (error) {
-        if (error.message === "Missing_HF_Key") {
-             return {
-                isError: true,
-                isReal: false,
-                confidence: 0,
-                details: 'MISSING HUGGINGFACE API KEY!',
-                notice: 'Add HF_API_KEY in .env to get true ML data.'
-            };
-        }
-
-        console.error('[Live Deepfake] ML Error:', error.response?.data || error.message);
-        
-        let errData = error.response?.data;
-        if (typeof errData === 'string' && errData.includes('<html')) {
-            errData = { error: 'Network WAF blocked request. Please wait 10s.' };
-        }
-
-        if (errData && errData.error && errData.error.includes('loading')) {
-            return {
-                isError: true,
-                isReal: false,
-                confidence: 0,
-                details: `Waking up AI model Server. ETA: ${Math.round(errData.estimated_time || 20)} seconds.`,
-                notice: 'Connecting to HuggingFace Datacenter...'
-            };
-        }
-
-        return {
-            isError: true,
-            isReal: false,
-            confidence: 0,
-            details: `API Error: ${errData?.error || error.message}. Retrying...`,
-            notice: 'Network unstable or model timeout.'
-        };
+        console.error('[Engine] Neural Error:', error.response?.data || error.message);
+        // Fallback to safe mode only on error
+        return { isError: true, isReal: true, confidence: 0.5 };
     }
 }
+
+function aggregateAndReturn(clientId, newFrame) {
+    const session = sessionVault[clientId];
+    
+    // Recovery Logic: Flush on clean hit
+    if (newFrame.isReal && newFrame.confidence > 0.8) {
+        session.history = [];
+    }
+
+    session.history.push(newFrame);
+    if (session.history.length > 5) session.history.shift();
+
+    const history = session.history;
+    const fakeVotes = history.filter(f => !f.isReal).length;
+    const avgConf = history.reduce((s, f) => s + f.confidence, 0) / (history.length || 1);
+
+    // Final Logic: Need majority of small window to trigger FAKE
+    const isAlert = fakeVotes >= 2 && avgConf > 0.6;
+
+    return {
+        isReal: !isAlert,
+        confidence: avgConf,
+        details: isAlert ? 'Persistent deepfake pattern detected.' : 'Temporal biometric stability confirmed.',
+        stats: {
+            fakeVotes,
+            avgConf: Math.round(avgConf * 100)
+        }
+    };
+}
+
+setInterval(() => {
+    const now = Date.now();
+    Object.keys(sessionVault).forEach(id => {
+        if (now - sessionVault[id].lastUpdated > 300000) delete sessionVault[id];
+    });
+}, 60000);
 
 module.exports = { analyze };
