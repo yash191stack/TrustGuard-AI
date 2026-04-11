@@ -20,16 +20,6 @@ export const analyzeURL = async (url) => {
   return res.json();
 };
 
-export const analyzeAudio = async (file) => {
-  const formData = new FormData();
-  formData.append('file', file);
-  const res = await fetch(`${API_BASE}/analyze/audio`, {
-    method: 'POST',
-    body: formData
-  });
-  if (!res.ok) throw new Error('Analysis failed');
-  return res.json();
-};
 
 export const analyzeImage = async (file) => {
   const formData = new FormData();

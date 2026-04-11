@@ -2,49 +2,185 @@ const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
 const FormData = require('form-data');
+const Jimp = require('jimp');
+const ExifParser = require('exif-parser');
 const preCheckFilter = require('./preCheckFilter');
 
+/**
+ * TRUSTGUARD AI — IMAGE FORENSIC SENTINEL (V31)
+ * 
+ * Purpose: Professional-grade image forensic engine that works locally.
+ * Layers:
+ * 1. Metadata Forensics (EXIF)
+ * 2. Noise Floor Analysis (Sensor vs. Synthetic)
+ * 3. Frequency Artifact Detection (Edge anomalies)
+ * 4. External API Escalation (Sightengine fallback)
+ */
 class ImageAnalyzer {
   async analyze(file) {
     if (!file) return { type: 'image', riskScore: 0, threats: [], indicators: [], details: {}, analysisSource: 'none', confidence: 0 };
     
-    // ─── COST OPTIMIZATION: Pre-check filter ───────────────────
-    const preCheck = preCheckFilter.preCheckImage(file);
-    console.log(`[Cost Optimization] Image pre-check: suspicious=${preCheck.suspicious}, score=${preCheck.localScore}`);
+    console.log(`[ImageSentinel] Initiating deep forensic scan: ${file.originalname}`);
 
-    // If image is NOT suspicious by metadata, skip expensive Sightengine API
-    if (!preCheck.suspicious) {
-      console.log(`[Cost Optimization] Image appears benign — skipping Sightengine API to save costs.`);
-      const result = this._analyzeLocally(file);
-      result.analysisSource = 'pre-check';
-      result.confidence = 35 + Math.min(result.riskScore, 25);
-      result.details.source = 'Rule-based Pre-check (API skipped)';
-      result.details.preCheck = preCheck;
-      result.details.costSaved = true;
-      return result;
-    }
-
-    // Image IS suspicious — try Sightengine
-    try {
-      if (process.env.SIGHTENGINE_API_SECRET) {
-        console.log(`[Cost Optimization] Image flagged as suspicious — escalating to Sightengine API...`);
-        const result = await this._analyzeWithSightengine(file);
-        result.analysisSource = 'api';
-        result.confidence = 85 + Math.floor(Math.random() * 10);
-        result.details.preCheck = preCheck;
-        return result;
-      }
-    } catch (e) {
-      console.warn("Sightengine Image API failed, falling back to basic analysis.", e.response?.data || e.message);
-    }
+    // ─── LAYER 1: METADATA FORENSICS ───────────────────────────
+    const metadataResult = this._analyzeMetadata(file);
     
-    // Fallback
-    const fallbackResult = this._analyzeLocally(file);
-    fallbackResult.analysisSource = 'heuristic';
-    fallbackResult.confidence = 40 + Math.min(fallbackResult.riskScore / 2, 20);
-    fallbackResult.fallbackUsed = true;
-    fallbackResult.details.preCheck = preCheck;
-    return fallbackResult;
+    // ─── LAYER 2: PIXEL FORENSICS (JIMP) ───────────────────────
+    let forensicResult = { riskScore: 0, threats: [], indicators: [] };
+    try {
+        forensicResult = await this._analyzePixels(file);
+    } catch (e) {
+        console.warn("[ImageSentinel] Pixel analysis failed, continuing with metadata:", e.message);
+    }
+
+    // ─── AGGREGATION ──────────────────────────────────────────
+    let riskScore = Math.max(metadataResult.riskScore, forensicResult.riskScore);
+    const threats = [...metadataResult.threats, ...forensicResult.threats];
+    const indicators = [...metadataResult.indicators, ...forensicResult.indicators];
+
+    // ─── LAYER 3: API ESCALATION (Optional) ────────────────────
+    if (riskScore > 20 && process.env.SIGHTENGINE_API_SECRET) {
+      try {
+        console.log(`[ImageSentinel] Suspicious markers found (${riskScore}) — escalating to Sightengine...`);
+        const apiRes = await this._analyzeWithSightengine(file);
+        // Merge API results if they provide more certainty
+        if (apiRes.riskScore > riskScore) {
+            riskScore = apiRes.riskScore;
+            threats.push(...apiRes.threats);
+            indicators.push(...apiRes.indicators);
+            return { ...apiRes, analysisSource: 'api', details: { ...apiRes.details, localForensics: forensicResult } };
+        }
+      } catch (e) {
+        console.warn("[ImageSentinel] API escalation failed (likely invalid keys):", e.message);
+      }
+    }
+
+    // Return Local Forensic Result
+    return {
+      type: 'image',
+      riskScore: Math.min(riskScore, 100),
+      threats: this._deduplicate(threats),
+      indicators: this._deduplicate(indicators),
+      analysisSource: riskScore > 10 ? 'heuristic' : 'pre-check',
+      confidence: 45 + Math.min(riskScore / 2, 40),
+      details: {
+        source: 'TrustGuard Local Forensic Engine',
+        metadata: metadataResult.rawExif,
+        forensics: forensicResult.metrics,
+        fileName: file.originalname,
+        fileSizeKB: Math.round(file.size / 1024)
+      }
+    };
+  }
+
+  // ─── INTERNAL: METADATA SCAN ─────────────────────────────────
+  _analyzeMetadata(file) {
+    let score = 0;
+    const threats = [];
+    const indicators = [];
+    let rawExif = null;
+
+    try {
+        const buffer = fs.readFileSync(file.path);
+        const parser = ExifParser.create(buffer);
+        const result = parser.parse();
+        rawExif = result.tags;
+
+        const software = (rawExif.Software || '').toLowerCase();
+        const artist = (rawExif.Artist || '').toLowerCase();
+        const desc = (rawExif.ImageDescription || '').toLowerCase();
+        
+        const aiKeywords = ['midjourney', 'dall-e', 'stable diffusion', 'adobe firefly', 'generative', 'ai generated', 'synthetic'];
+        
+        for (const kw of aiKeywords) {
+            if (software.includes(kw) || artist.includes(kw) || desc.includes(kw)) {
+                score += 70;
+                threats.push({
+                    type: 'AI_METADATA_SIGNATURE',
+                    category: 'DEEPFAKE',
+                    severity: 'high',
+                    description: `Image metadata explicitly identifies generative software: "${kw}"`
+                });
+                indicators.push({ keyword: kw, type: 'metadata', highlight: true });
+                break;
+            }
+        }
+
+        if (!rawExif.Make && !rawExif.Model && !software) {
+            score += 15;
+            indicators.push({ keyword: 'Stripped Metadata', type: 'metadata', highlight: false });
+        }
+
+    } catch (e) { /* Metadata missing or corrupt */ }
+
+    return { riskScore: score, threats, indicators, rawExif };
+  }
+
+  // ─── INTERNAL: PIXEL FORENSICS ───────────────────────────────
+  async _analyzePixels(file) {
+    const image = await Jimp.read(file.path);
+    const { width, height } = image.bitmap;
+    
+    // Sample pixels for noise analysis
+    const samples = [];
+    const step = Math.max(1, Math.floor(width / 20)); // Sample 20x20 grid
+    
+    let totalVar = 0;
+    let sampleCount = 0;
+
+    for (let x = 0; x < width; x += step) {
+        for (let y = 0; y < height; y += step) {
+            const color = Jimp.intToRGBA(image.getPixelColor(x, y));
+            const brightness = (color.r + color.g + color.b) / 3;
+            samples.push(brightness);
+        }
+    }
+
+    // Calculate Variance
+    const avg = samples.reduce((a, b) => a + b, 0) / samples.length;
+    const variance = samples.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / samples.length;
+    const stdDev = Math.sqrt(variance);
+
+    const threats = [];
+    const indicators = [];
+    let score = 0;
+
+    // AI images often have unnaturally low sensor noise (standard deviation)
+    // Real photos typically have stdDev > 15-20 even in flat areas
+    console.log(`[ImageSentinel] StdDev: ${stdDev.toFixed(2)}, Avg Brightness: ${avg.toFixed(2)}`);
+
+    if (stdDev < 4) {
+        score += 45;
+        threats.push({
+            type: 'SYNTHETIC_SMOOTHNESS',
+            category: 'DEEPFAKE',
+            severity: 'medium',
+            description: 'Image lacks standard sensor noise patterns (unnaturally uniform pixels)'
+        });
+        indicators.push({ keyword: 'Low Noise Floor', type: 'forensic', highlight: true });
+    } else if (stdDev < 8) {
+        score += 20;
+        indicators.push({ keyword: 'Minimal Texture', type: 'forensic', highlight: true });
+    }
+
+    // Simple Frequency Check (Laplacian Approximation via local diffs)
+    let sharpDiffs = 0;
+    for (let i = 1; i < samples.length; i++) {
+        if (Math.abs(samples[i] - samples[i-1]) > 50) sharpDiffs++;
+    }
+    const sharpnessRatio = sharpDiffs / samples.length;
+
+    if (sharpnessRatio > 0.15) {
+        score += 15;
+        indicators.push({ keyword: 'High Edge Sharpness', type: 'forensic', highlight: false });
+    }
+
+    return {
+        riskScore: score,
+        threats,
+        indicators,
+        metrics: { stdDev: stdDev.toFixed(2), sharpnessRatio: sharpnessRatio.toFixed(2), brightness: avg.toFixed(2) }
+    };
   }
 
   async _analyzeWithSightengine(file) {
@@ -58,7 +194,8 @@ class ImageAnalyzer {
       method: 'post',
       url: 'https://api.sightengine.com/1.0/check.json',
       data: data,
-      headers: data.getHeaders()
+      headers: data.getHeaders(),
+      timeout: 10000
     });
 
     const body = response.data;
@@ -66,68 +203,27 @@ class ImageAnalyzer {
     let threats = [];
     let indicators = [];
 
-    // Check GenAI
     if (body.type && body.type.ai_generated > 0.5) {
       const score = Math.round(body.type.ai_generated * 100);
-      riskScore = Math.max(riskScore, score);
+      riskScore = score;
       threats.push({
-        type: 'AI_GENERATED', category: 'DEEPFAKE', severity: score > 80 ? 'high' : 'medium',
-        description: `High probability (${score}%) that this image is AI generated.`
+        type: 'AI_GENERATED_DETECTED', category: 'DEEPFAKE', severity: score > 80 ? 'high' : 'medium',
+        description: `Neural analysis identifies synthetic generation artifacts (${score}%)`
       });
-      indicators.push({ keyword: 'AI Generated', type: 'deepfake', highlight: true });
+      indicators.push({ keyword: 'AI Model Match', type: 'deepfake', highlight: true });
     }
 
-    // Check weapon / drugs / gore
-    if (body.weapon > 0.5 || body.gore?.prob > 0.5) {
-      riskScore = Math.max(riskScore, 85);
-      threats.push({
-        type: 'NSFW_CONTENT', category: 'MODERATION', severity: 'critical',
-        description: 'Image contains violent or restricted content.'
-      });
-      indicators.push({ keyword: 'Restricted Content', type: 'moderation', highlight: true });
-    }
-
-    return {
-      type: 'image',
-      riskScore,
-      threats, indicators,
-      details: {
-        fileName: file.originalname,
-        source: 'Sightengine API',
-        analysisTimestamp: new Date().toISOString()
-      }
-    };
+    return { type: 'image', riskScore, threats, indicators, details: { fileName: file.originalname, apiSource: 'Sightengine' } };
   }
 
-  _analyzeLocally(file) {
-    let threats = [];
-    let indicators = [];
-    let score = 5;
-    const name = (file.originalname || '').toLowerCase();
-
-    // Filename heuristics
-    if (name.includes('ai_') || name.includes('generated')) {
-      threats.push({ type: 'SUSPICIOUS_FILENAME', category: 'DEEPFAKE', severity: 'medium', description: 'Filename suggests AI-generated content' });
-      indicators.push({ keyword: 'Suspicious filename', type: 'metadata', highlight: true });
-      score += 30;
-    }
-    if (name.includes('deepfake') || name.includes('faceswap')) {
-      threats.push({ type: 'DEEPFAKE_METADATA', category: 'DEEPFAKE', severity: 'high', description: 'Filename explicitly contains deepfake-related terms' });
-      indicators.push({ keyword: 'Deepfake filename', type: 'metadata', highlight: true });
-      score += 50;
-    }
-
-    // File size heuristic
-    const sizeKB = file.size / 1024;
-    if (sizeKB < 5) {
-      threats.push({ type: 'SUSPICIOUS_SIZE', category: 'DEEPFAKE', severity: 'low', description: 'Image file is unusually small' });
-      score += 10;
-    }
-
-    return {
-      type: 'image', riskScore: Math.min(score, 100), threats, indicators,
-      details: { source: 'Heuristics', fileName: file.originalname, fileSizeKB: Math.round(sizeKB) }
-    };
+  _deduplicate(arr) {
+    const seen = new Set();
+    return arr.filter(item => {
+      const val = item.keyword || item.type;
+      if (seen.has(val)) return false;
+      seen.add(val);
+      return true;
+    });
   }
 }
 

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { analyzeText, analyzeURL, analyzeAudio, analyzeImage, analyzeDocument, analyzeVideo } from '../utils/api';
+import { analyzeText, analyzeURL, analyzeImage, analyzeDocument, analyzeVideo } from '../utils/api';
 import ThreatMeter from './ThreatMeter';
 import ResultCard from './ResultCard';
 import './Scanner.css';
@@ -29,7 +29,6 @@ export default function Scanner() {
     { id: 'text', label: 'MESSAGE', icon: '[TXT]', placeholder: 'PASTE SUSPICIOUS TEXT HERE...' },
     { id: 'url', label: 'LINK', icon: '[URL]', placeholder: 'ENTER A SUSPICIOUS URL HERE...' },
     { id: 'document', label: 'DOC', icon: '[DOC]', accept: '.pdf,.doc,.docx,.txt' },
-    { id: 'audio', label: 'AUDIO', icon: '[WAV]', accept: 'audio/*' },
     { id: 'image', label: 'IMG', icon: '[JPG]', accept: 'image/*' },
     { id: 'video', label: 'VIDEO', icon: '[MP4]', accept: 'video/*' }
   ];
@@ -104,10 +103,6 @@ export default function Scanner() {
           if (!file) { setError('FATAL: DOC UPLOAD REQUIRED'); setLoading(false); return; }
           res = await analyzeDocument(file);
           break;
-        case 'audio':
-          if (!file) { setError('FATAL: AUDIO UPLOAD REQUIRED'); setLoading(false); return; }
-          res = await analyzeAudio(file);
-          break;
         case 'image':
           if (!file) { setError('FATAL: IMAGE UPLOAD REQUIRED'); setLoading(false); return; }
           res = await analyzeImage(file);
@@ -141,7 +136,7 @@ export default function Scanner() {
     setError('');
   };
 
-  const isFileTab = ['audio', 'image', 'document', 'video'].includes(activeTab);
+  const isFileTab = ['image', 'document', 'video'].includes(activeTab);
   const currentTabData = tabs.find(t => t.id === activeTab);
   const phases = getPhases();
 
@@ -195,7 +190,7 @@ export default function Scanner() {
                 />
                 {file ? (
                   <div className="file-info">
-                    <div className="file-icon">{currentTab.icon}</div>
+                    <div className="file-icon">{currentTabData.icon}</div>
                     <div className="file-name">{file.name}</div>
                     <div className="file-size">{(file.size / 1024).toFixed(1)} KB</div>
                     <button className="file-remove" onClick={(e) => { e.stopPropagation(); setFile(null); }}>[X]</button>
@@ -203,7 +198,7 @@ export default function Scanner() {
                 ) : (
                   <div className="drop-content">
                     <div className="drop-icon">[+]</div>
-                    <div className="drop-text">DROP {currentTab.label} HERE</div>
+                    <div className="drop-text">DROP {currentTabData.label} HERE</div>
                     <div className="drop-subtext">OR CLICK TO BROWSE</div>
                   </div>
                 )}

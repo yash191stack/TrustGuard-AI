@@ -4,7 +4,6 @@ const upload = require('../middleware/upload');
 const rateLimiter = require('../middleware/rateLimiter');
 const textAnalyzer = require('../engines/textAnalyzer');
 const urlAnalyzer = require('../engines/urlAnalyzer');
-const audioAnalyzer = require('../engines/audioAnalyzer');
 const imageAnalyzer = require('../engines/imageAnalyzer');
 const documentAnalyzer = require('../engines/documentAnalyzer');
 const videoAnalyzer = require('../engines/videoAnalyzer');
@@ -124,26 +123,6 @@ router.post('/document', upload.single('file'), async (req, res) => {
   }
 });
 
-// POST /api/analyze/audio
-router.post('/audio', upload.single('file'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'Audio file is required' });
-    }
-    if (!validateFileSize(req, res)) return;
-    const analysis = await audioAnalyzer.analyze(req.file);
-    const result = riskCalculator.calculateFinalResult(analysis);
-    result.inputPreview = req.file.originalname;
-    updateHistory(result);
-    recordLiveScan(result);
-    cleanup(req);
-    res.json(result);
-  } catch (error) {
-    console.error('Audio analysis error:', error);
-    cleanup(req);
-    res.status(500).json({ error: 'Analysis failed', message: error.message });
-  }
-});
 
 // POST /api/analyze/image
 router.post('/image', upload.single('file'), async (req, res) => {

@@ -39,7 +39,6 @@ app.get('/api/health', (req, res) => {
     engines: {
       text: 'active',
       url: 'active',
-      audio: 'active',
       image: 'active',
       video: 'active',
       preCheckFilter: 'active',
