@@ -1,0 +1,49 @@
+
+> trustguard-ai-backend@1.0.0 start
+> node server.js
+
+◇ injected env (7) from .env // tip: ⌘ enable debugging { debug: true }
+
+  ╔══════════════════════════════════════════════════════╗
+  ║       🛡️  TrustGuard AI Engine v2.0  🛡️              ║
+  ║                                                      ║
+  ║   Server running on port 5001                       ║
+  ║   API: http://localhost:5001/api                    ║
+  ║                                                      ║
+  ║   🚀 Optimizations Active:                           ║
+  ║   ✅ Cost Optimization  — Pre-check Filter Layer     ║
+  ║   ✅ Video Sampling     — Key Frame (7 frames)       ║
+  ║   ✅ Rate Limiting      — 30 req/min per IP          ║
+  ║   ✅ File Size Cap      — 10MB max                   ║
+  ║   ✅ Risk Output        — 3-Tier Categories          ║
+  ║   ✅ Fallback Mode      — Auto on API failure        ║
+  ╚══════════════════════════════════════════════════════╝
+  
+[Sightengine] Processing frame for client: unknown
+[Engine] Neural Error: {
+  status: 'failure',
+  request: {
+    id: 'req_ksU3lSZ2I4JWhVGOJliM0',
+    timestamp: 1775888823.118301,
+    operations: 0
+  },
+  error: {
+    type: 'credentials_error',
+    code: 1,
+    message: 'Incorrect API user or API secret'
+  }
+}
+[Sightengine] Processing frame for client: unknown
+[Engine] Neural Error: {
+  status: 'failure',
+  request: {
+    id: 'req_ksUkm6S5AZn863HligB3B',
+    timestamp: 1775889844.577865,
+    operations: 0
+  },
+  error: {
+    type: 'credentials_error',
+    code: 1,
+    message: 'Incorrect API user or API secret'
+  }
+}

@@ -22,11 +22,11 @@ const recordLiveScan = (result) => {
 // POST /api/analyze/realtime-deepfake
 router.post('/realtime-deepfake', async (req, res) => {
   try {
-    const { frame, centerAvg, edgeAvg } = req.body;
+    const { frame } = req.body;
     if (!frame) {
       return res.status(400).json({ error: 'Frame data is required' });
     }
-    const analysis = await arayaAnalyzer.analyze(frame, centerAvg, edgeAvg);
+    const analysis = await arayaAnalyzer.analyze(frame);
     res.json(analysis);
   } catch (error) {
     console.error('Realtime deepfake analysis error:', error);
