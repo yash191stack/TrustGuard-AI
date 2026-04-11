@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -11,7 +11,14 @@ const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://localhost:5174'],
+  origin: [
+    'http://localhost:5173', 
+    'http://localhost:3000', 
+    'http://127.0.0.1:5173', 
+    'http://localhost:5174', 
+    'http://localhost:5175',
+    'http://[::1]:5173'
+  ],
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
@@ -49,7 +56,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Error handling
+// Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
   if (err.code === 'LIMIT_FILE_SIZE') {
@@ -58,7 +65,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
-app.listen(PORT, () => {
+// Start server with port error handling
+const server = app.listen(PORT, () => {
   console.log(`
   ╔══════════════════════════════════════════════════════╗
   ║       🛡️  TrustGuard AI Engine v2.0  🛡️              ║
@@ -73,17 +81,17 @@ app.listen(PORT, () => {
   ║   ✅ File Size Cap      — 10MB max                   ║
   ║   ✅ Risk Output        — 3-Tier Categories          ║
   ║   ✅ Fallback Mode      — Auto on API failure        ║
-  ║                                                      ║
-  ║   Engines Status:                                    ║
-  ║   ✅ Text Analyzer      — Active (+ Pre-check)       ║
-  ║   ✅ URL Analyzer       — Active (+ Pre-check)       ║
-  ║   ✅ Image Analyzer     — Active (+ Pre-check)       ║
-  ║   ✅ Video Analyzer     — Active (+ Key Frames)      ║
-  ║   ✅ Audio Analyzer     — Active                     ║
-  ║   ✅ Document Analyzer  — Active                     ║
-  ║   ✅ Risk Calculator    — Active (3-Tier Output)     ║
   ╚══════════════════════════════════════════════════════╝
   `);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Error: Port ${PORT} is already in use. Please kill the existing process or use a different port.`);
+    process.exit(1);
+  } else {
+    console.error('❌ Server failed to start:', err.message);
+  }
 });
 
 module.exports = app;

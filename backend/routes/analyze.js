@@ -18,7 +18,23 @@ const recordLiveScan = (result) => {
   try { statsRouter.recordScan(result); } catch (e) { /* non-blocking */ }
 };
 
-// ─── RATE LIMITING: Apply to all analyze routes ────────────────
+// ─── BYPASS RATE LIMIT FOR LIVE STREAM ───────────────────────────
+// POST /api/analyze/realtime-deepfake
+router.post('/realtime-deepfake', async (req, res) => {
+  try {
+    const { frame, centerAvg, edgeAvg } = req.body;
+    if (!frame) {
+      return res.status(400).json({ error: 'Frame data is required' });
+    }
+    const analysis = await arayaAnalyzer.analyze(frame, centerAvg, edgeAvg);
+    res.json(analysis);
+  } catch (error) {
+    console.error('Realtime deepfake analysis error:', error);
+    res.status(500).json({ error: 'Analysis failed', message: error.message });
+  }
+});
+
+// ─── RATE LIMITING: Apply to all other analyze routes ────────────────
 router.use(rateLimiter.middleware());
 
 // In-memory scan history
@@ -150,21 +166,7 @@ router.post('/image', upload.single('file'), async (req, res) => {
   }
 });
 
-// POST /api/analyze/realtime-deepfake
-router.post('/realtime-deepfake', async (req, res) => {
-  try {
-    const { frame } = req.body;
-    if (!frame) {
-      return res.status(400).json({ error: 'Frame data is required' });
-    }
-    const analysis = await arayaAnalyzer.analyze(frame);
-    
-    res.json(analysis);
-  } catch (error) {
-    console.error('Realtime deepfake analysis error:', error);
-    res.status(500).json({ error: 'Analysis failed', message: error.message });
-  }
-});
+
 
 // POST /api/analyze/video
 router.post('/video', upload.single('file'), async (req, res) => {

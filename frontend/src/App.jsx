@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import ParticleBackground from './components/ParticleBackground';
+import BrutalDecorations from './components/BrutalDecorations';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Scanner from './components/Scanner';
@@ -19,18 +19,17 @@ export default function App() {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             entry.target.classList.add('visible');
-            // Unobserve after revealing to prevent repeating animation when scrolling back up
+            // Brutalist reveal is faster
             observer.unobserve(entry.target);
           }
         });
       },
-      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+      { threshold: 0.05, rootMargin: '0px 0px -20px 0px' }
     );
 
-    // Give React a tiny tick to finish mounting elements before querySelect
     setTimeout(() => {
       const targets = document.querySelectorAll(
-        '.glass-card, .feature-card, .scanner-area, .section-header, .stat-card, .history-item'
+        '.glass-card, .feature-card, .scanner-area, .section-header, .stat-card, .history-item, .result-card'
       );
       targets.forEach((el) => {
         el.classList.add('reveal');
@@ -51,15 +50,21 @@ export default function App() {
 
   return (
     <>
-      <ParticleBackground />
+      <BrutalDecorations />
       <Navbar activeSection={activeSection} onNavigate={handleNavigate} />
       <main>
         <Hero onNavigate={handleNavigate} />
+        <div id="home"></div>
         <Scanner />
+        <div id="scanner"></div>
         <LiveDeepfake />
+        <div id="deepfake"></div>
         <Dashboard />
+        <div id="dashboard"></div>
         <History />
+        <div id="history"></div>
         <Education />
+        <div id="education"></div>
       </main>
       <Footer />
     </>

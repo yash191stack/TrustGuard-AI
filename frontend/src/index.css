@@ -1,66 +1,55 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@900&family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@700;800&display=swap');
 
 :root {
-  /* Enterprise Cybersecurity Palette */
-  --bg-primary: #020617; /* Slate 950 */
-  --bg-card: rgba(15, 23, 42, 0.85); /* Slate 900 */
-  --bg-glass: rgba(30, 41, 59, 0.6); /* Slate 800 */
-
-  --accent-cyan: #0EA5E9; /* Enterprise Teal/Cyan */
-  --accent-purple: #38BDF8; /* Light Sky Blue for softer accents instead of purple */
-  --accent-green: #10B981; /* Success Green */
-  --accent-yellow: #F59E0B; /* Warning Amber */
-  --accent-red: #E11D48; /* Threat Crimson */
+  /* REFINED CYBER-BRUTALIST SYSTEM */
+  --bg-primary: #15181f;    /* Slightly lighter than before for better visibility */
+  --bg-card: #21262d;       /* Distinct from background */
+  --bg-offset: #2d333b;
   
-  --text-primary: #F8FAFC; /* Slate 50 */
-  --text-secondary: #94A3B8; /* Slate 400 */
-  --text-muted: #64748B; /* Slate 500 */
+  --accent-safe: #00ff9f;    /* Phosphate Green */
+  --accent-info: #00e0ff;    /* Improved Cyan/Blue */
+  --accent-warn: #ffcf00;    /* Cyber Yellow */
+  --accent-alert: #ff4d4d;   /* Vibrance Red */
   
-  /* Sterile Thin Lines */
-  --border-color: rgba(14, 165, 233, 0.2);
-  --border-glow: rgba(14, 165, 233, 0.6);
+  --text-main: #ffffff;
+  --text-dim: #ccd6f6;      /* High-visibility secondary text */
+  --text-muted: #8b949e;
+  
+  --border-width: 3px;
+  --border-color: #ffffff;
+  
+  /* Hard shadow offsets - increased presence */
+  --shadow-brutal: 6px 6px 0px rgba(0, 0, 0, 0.8);
+  --shadow-accent: 6px 6px 0px var(--accent-info);
   
   /* Font Families */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-head: 'Space Grotesk', 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
   
-  /* Spacing */
-  --space-xs: 8px;
-  --space-sm: 12px;
-  --space-md: 24px;
-  --space-lg: 36px;
-  --space-xl: 48px;
-  --space-2xl: 64px;
-  --space-3xl: 96px;
-
-  /* Sterile Box Curves */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-full: 9999px;
-
-  /* Tight UI Shadows, less bloom, more depth */
-  --shadow-glow: 0 4px 20px rgba(2, 6, 23, 0.9);
-  --transition-base: 0.2s ease-in-out;
+  --transition-immediate: 0s;
+  --transition-sharp: 0.1s ease-in-out;
 }
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  border-radius: 0 !important; /* No rounded corners in brutalism */
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: var(--font-mono);
   background-color: var(--bg-primary);
-  color: var(--text-primary);
+  color: var(--text-main);
   min-height: 100vh;
   overflow-x: hidden;
   line-height: 1.5;
-  background-image: linear-gradient(rgba(14, 165, 233, 0.03) 1px, transparent 1px),
-  linear-gradient(90deg, rgba(14, 165, 233, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px; /* Subtle tactical grid */
+  
+  /* Crisp grid background - more visible now */
+  background-image: 
+    linear-gradient(rgba(0, 224, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 224, 255, 0.08) 1px, transparent 1px);
+  background-size: 50px 50px;
 }
 
 #root {
@@ -69,118 +58,134 @@ body {
   flex-direction: column;
 }
 
-/* Typography */
-h1, h2, h3, h4, h5, h6, .section-title, .hero-title {
-  font-family: var(--font-sans);
-  font-weight: 500; /* Sophisticated weight */
-  color: var(--text-primary);
-  line-height: 1.2;
-  letter-spacing: -0.5px;
+/* TYPOGRAPHY: MAX CONTRAST */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-head);
+  text-transform: uppercase;
+  font-weight: 900;
+  letter-spacing: -2px;
+  line-height: 0.85;
+  margin-bottom: 2rem;
+  color: #fff;
+  text-shadow: 4px 4px 0px rgba(0,0,0,0.5);
 }
 
-.hero-title {
-  font-size: clamp(2.5rem, 5vw, 4rem);
-  font-weight: 700;
-  margin-bottom: var(--space-lg);
-  text-transform: none;
+h1 { font-size: clamp(3.5rem, 10vw, 7rem); }
+h2 { font-size: clamp(2.5rem, 6vw, 4.5rem); }
+
+.section-title {
+  background: var(--accent-info);
+  color: #000;
+  padding: 0.5rem 2rem;
+  display: inline-block;
+  border: var(--border-width) solid #000;
+  box-shadow: 6px 6px 0px #000;
+  margin-bottom: 3rem;
+  transform: rotate(-1deg);
 }
 
-.gradient-text-cyan {
-  color: var(--accent-cyan);
-  text-shadow: 0 0 10px rgba(14, 165, 233, 0.3);
-}
-
-/* High-Tech Tactical Forms */
+/* REFINED BRUTALIST CARDS */
 .glass-card, .feature-card, .stat-card, .global-item, 
 .scanner-textarea, .file-drop-zone, .scanner-card, 
-.result-card, .threat-meter, .threat-row, .navbar-scrolled {
+.result-card, .threat-meter, .threat-row, .history-card, .edu-card {
   background: var(--bg-card);
-  border: 1px solid var(--border-color) !important; /* Critical override */
-  backdrop-filter: blur(20px) !important;
-  border-radius: var(--radius-md) !important;
-  box-shadow: var(--shadow-glow) !important;
-  transition: all var(--transition-base);
+  border: var(--border-width) solid #fff !important;
+  box-shadow: var(--shadow-brutal) !important;
+  transition: transform 0.1s, box-shadow 0.1s;
+  padding: 2.5rem;
+  margin-bottom: 1.5rem;
   position: relative;
-  overflow: hidden;
 }
 
-/* Technical Hover States */
-.glass-card:hover, .feature-card:hover, .file-drop-zone:hover, .result-card:hover {
-  border-color: var(--border-glow) !important;
-  background: rgba(15, 23, 42, 0.95) !important;
+.feature-card:hover, .stat-card:hover, .edu-card:hover {
+  transform: translate(-6px, -6px);
+  box-shadow: 12px 12px 0px var(--accent-info) !important;
+  border-color: var(--accent-info) !important;
 }
 
-/* Buttons */
+/* BUTTONS: HYPER READABLE */
 button, .btn-primary, .btn-secondary, .scan-button, .nav-link {
-  background: rgba(14, 165, 233, 0.05); /* very subtle */
-  color: var(--accent-cyan);
-  font-family: var(--font-mono); /* Terminal look for active elements */
-  font-weight: 600;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  padding: 10px 20px;
-  font-size: 0.9rem;
-  letter-spacing: 0.5px;
+  background: #ffffff;
+  color: #000000;
+  font-family: var(--font-mono);
+  font-weight: 800;
+  text-transform: uppercase;
+  border: var(--border-width) solid #000;
+  padding: 1.2rem 2.5rem;
+  font-size: 1.2rem;
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: all 0.05s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  box-shadow: 5px 5px 0px #000;
 }
 
 button:hover, .btn-primary:hover, .scan-button:hover {
-  background: rgba(14, 165, 233, 0.15);
-  color: #FFF;
-  border-color: var(--accent-cyan);
-  box-shadow: inset 0 0 15px rgba(14, 165, 233, 0.2);
+  background: var(--accent-info);
+  box-shadow: 0px 0px 0px #000;
+  transform: translate(5px, 5px);
 }
 
 .btn-secondary {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: var(--text-secondary);
+  background: var(--bg-offset);
+  color: #fff;
+  border-color: #fff;
+  box-shadow: 5px 5px 0px var(--accent-info);
 }
+
 .btn-secondary:hover {
-  background: rgba(255,255,255,0.08);
-  border-color: rgba(255,255,255,0.3);
-  color: var(--text-primary);
+  background: var(--accent-info);
+  color: #000;
+  box-shadow: 0px 0px 0px #000;
 }
 
-/* Status resets */
-.status-dot, .badge-dot, .threat-severity-dot {
-  border-radius: 50% !important;
-  border: 2px solid rgba(255,255,255,0.1);
-}
-
-/* Clean Professional Animations */
-.fade-in {
-  animation: fadeIn 0.6s ease forwards;
-}
-
-.slide-up {
-  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.reveal {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, transform;
-}
-
-.reveal.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(15px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Data styling classes for specific elements overriding basic inputs */
+/* FORM ENHANCEMENTS */
 input, textarea {
+  background: #000000;
+  color: #00f0ff !important; /* Brighter for dark background */
+  border: var(--border-width) solid #ffffff !important;
+  padding: 1.5rem !important;
+  font-size: 1.2rem !important;
   font-family: var(--font-mono);
+  width: 100%;
+}
+
+input::placeholder, textarea::placeholder {
+  color: rgba(0, 240, 255, 0.4);
+}
+
+input:focus, textarea:focus {
+  border-color: var(--accent-info) !important;
+  box-shadow: 8px 8px 0px rgba(0, 224, 255, 0.2);
+}
+
+/* STATUS COLORS */
+.accent-green { color: var(--accent-safe); font-weight: 800; }
+.accent-blue { color: var(--accent-info); font-weight: 800; }
+.accent-yellow { color: var(--accent-warn); font-weight: 800; }
+.accent-red { color: var(--accent-alert); font-weight: 800; }
+
+/* UTILITY CLASSES */
+.text-dim { color: var(--text-dim); }
+.text-bold { font-weight: 900; text-transform: uppercase; }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 18px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { 
+  background: #fff; 
+  border: 4px solid var(--bg-primary); 
+}
+::-webkit-scrollbar-thumb:hover { background: var(--accent-info); }
+
+@keyframes pulse-border {
+  0% { border-color: #fff; }
+  50% { border-color: var(--accent-info); }
+  100% { border-color: #fff; }
+}
+
+.pulse-border {
+  animation: pulse-border 2s infinite step-end;
 }

@@ -17,8 +17,10 @@ export default function ResultCard({ result }) {
 
   const sourceInfo = sourceLabels[analysisSource] || sourceLabels['none'];
 
+  const riskClass = result.riskLevel?.level?.toLowerCase().replace('_', '-') || 'safe';
+
   return (
-    <div className="result-card glass-card">
+    <div className={`result-card glass-card risk-${riskClass}`}>
       {/* Header */}
       <div className="result-header">
         <div className="result-category" style={{ borderColor: threatCategory?.color }}>

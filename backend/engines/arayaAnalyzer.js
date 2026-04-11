@@ -1,66 +1,89 @@
 const axios = require('axios');
 
 async function analyze(base64Frame) {
-    // Check if API key is provided
-    const apiKey = process.env.ARAYA_API_KEY;
-    
-    if (!apiKey || apiKey.trim() === '') {
-        // Fallback Mock Mode - useful until user provides the key
-        console.log('[ArayaAnalyzer] API Key missing. Returning mock result.');
-        const isReal = Math.random() > 0.4; // 60% chance real
-        
-        // Simulating network delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        return {
-            isReal: isReal,
-            confidence: 0.85 + (Math.random() * 0.1),
-            details: isReal ? 'No artificial manipulation detected in facial structures.' : 'Synthetic anomalies detected. Inconsistent micro-expressions.',
-            notice: 'Mock result: ARAYA_API_KEY missing in .env'
-        };
-    }
-
     try {
-        console.log('[ArayaAnalyzer] Calling Araya.ai API...');
-        
-        // Convert data URL to base64 string without prefix for API if needed
+        console.log('[Live Deepfake] Sending high-res JSON frame to HF AI Engine...');
+        const hfKey = process.env.HF_API_KEY;
+
+        if (!hfKey) {
+            throw new Error("Missing_HF_Key");
+        }
+
         const base64Data = base64Frame.includes('base64,') ? base64Frame.split('base64,')[1] : base64Frame;
-        
+
+        // HuggingFace Inference API expects perfectly formatted JSON for vision models
+        // Using axios is stable for JSON JSON.stringify payloads
         const response = await axios.post(
-            'https://api.arya.ai/v1/deepfake-detection',
+            "https://router.huggingface.co/hf-inference/models/prithivMLmods/Deep-Fake-Detector-v2-Model",
+            { inputs: base64Data },
             {
-                image: base64Data
-            },
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${hfKey}`
                 }
             }
         );
-        
-        const result = response.data;
-        
-        // Example parsing (Placeholder logic: change based on actual API format once user provides it)
-        const confidenceScore = result.confidence || 0.9;
-        const isActuallyReal = result.decision ? result.decision === 'REAL' : result.is_real;
+
+        let data = response.data;
+        if (Array.isArray(data) && Array.isArray(data[0])) {
+            data = data[0]; 
+        }
+
+        let isReal = true;
+        let confidence = 0.99;
+        let fakeScore = 0;
+
+        if (Array.isArray(data)) {
+            const fakeLabel = data.find(d => d.label && d.label.toLowerCase().includes('fake'));
+            if (fakeLabel) fakeScore = fakeLabel.score;
+        }
+
+        isReal = fakeScore < 0.5;
+        confidence = isReal ? (1 - fakeScore) : fakeScore;
 
         return {
-            isReal: isActuallyReal ?? true,
-            confidence: confidenceScore,
-            details: 'Analyzed via Araya.ai live API'
+            isReal: isReal,
+            confidence: confidence,
+            details: isReal 
+                ? 'Face verified as authentic via neural analysis.' 
+                : 'Generative ML patterns or deepfake artifacts detected by the model.',
+            notice: 'Analyzed via HuggingFace Deepfake Classifier (Real AI)'
         };
 
     } catch (error) {
-        console.error('[ArayaAnalyzer] Error:', error.response?.data || error.message);
+        if (error.message === "Missing_HF_Key") {
+             return {
+                isError: true,
+                isReal: false,
+                confidence: 0,
+                details: 'MISSING HUGGINGFACE API KEY!',
+                notice: 'Add HF_API_KEY in .env to get true ML data.'
+            };
+        }
+
+        console.error('[Live Deepfake] ML Error:', error.response?.data || error.message);
         
-        // Fallback to Mock Data if the endpoint fails (since placeholder endpoint is used)
-        const isReal = Math.random() > 0.4;
+        let errData = error.response?.data;
+        if (typeof errData === 'string' && errData.includes('<html')) {
+            errData = { error: 'Network WAF blocked request. Please wait 10s.' };
+        }
+
+        if (errData && errData.error && errData.error.includes('loading')) {
+            return {
+                isError: true,
+                isReal: false,
+                confidence: 0,
+                details: `Waking up AI model Server. ETA: ${Math.round(errData.estimated_time || 20)} seconds.`,
+                notice: 'Connecting to HuggingFace Datacenter...'
+            };
+        }
+
         return {
-            isReal: isReal,
-            confidence: 0.85 + (Math.random() * 0.1),
-            details: 'API Failed/Invalid Endpoint. Falling back to Mock analysis.',
-            notice: 'Mock Result: Please configure the exact Araya.ai endpoint documentation in backend/engines/arayaAnalyzer.js'
+            isError: true,
+            isReal: false,
+            confidence: 0,
+            details: `API Error: ${errData?.error || error.message}. Retrying...`,
+            notice: 'Network unstable or model timeout.'
         };
     }
 }
